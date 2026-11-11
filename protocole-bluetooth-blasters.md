@@ -94,3 +94,12 @@ Modèles : `0` Pistol, `1` Rifle, `2` Sidearm, `3` Sniper, `4` Uzi.
 ## Conséquence pour Laser Arena
 
 Chaque blaster reçoit un **n° de joueur** unique via `0x49`. Chaque message « touché » contient le n° du tireur. L'app peut donc compter automatiquement **qui touche qui**, la santé et les éliminations. Il faudra un iPhone pour tous les blasters, avec plusieurs connexions Bluetooth en même temps. iOS en accepte généralement 6 à 10 selon le modèle, à vérifier.
+
+## Noms d'origine des blasters
+
+Le message `0x35` contient aux octets [9] et [10] deux indices (1 à 50) qui forment le nom donné par l'app officielle et gardé dans le blaster. 0 = pas de nom. Listes extraites de l'APK (`BlasterNameList`, ordre d'origine) :
+
+- 1er mot : Air, Alpha, Atomic, Beta, Blazing, Blue, Cool, Cosmic, Crimson, Dark, Earth, Elite, Epic, Fallen, Fierce, Fire, Furious, Gamma, Glowing, Green, Heroic, Howling, Laser, Lethal, Light, Lightning, Metal, Mighty, Neon, Omega, Orange, Pale, Pink, Purple, Quick, Radiant, Red, Rock, Shadow, Stealth, Super, Thunder, Twilight, Velvet, Void, Water, Wild, Wind, Wood, Yellow
+- 2e mot : Beast, Blast, Brawler, Cobra, Colonel, Commander, Commando, Defender, Dragon, Eagle, Falcon, Force, General, Guardian, Gunner, Gunslinger, Hero, King, Knight, Leader, Lion, Mantis, Marshal, Master, Monkey, Moon, Ninja, Officer, Operative, Pirate, Queen, Raptor, Samurai, Scorpion, Sheriff, Snake, Sniper, Soldier, Star, Storm, Sun, T-Rex, Tiger, Vampire, Villain, Viper, Warrior, Werewolf, Wolf, Zombie
+
+Exemples : `09 32` = Crimson Zombie, `07 1c` = Cool Officer. Les traductions ne sont pas dans l'APK (noms affichés en anglais).
