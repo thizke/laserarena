@@ -1,0 +1,1801 @@
+<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><style>[hidden]{display:none!important}:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}</style></head><body><title>Laser Arena</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=Barlow:wght@400;500;600;700&display=swap">
+<style>
+/* Layout : appli mobile à onglets ; écran Live plein écran avec barre de commande fixe.
+   Thème unique sombre « salle d'arène » choisi volontairement. */
+:root{
+  color-scheme: dark;
+  --bg:#0A0E16; --surface:#121925; --surface-2:#19222F; --surface-3:#222D3D;
+  --line:rgba(150,172,214,.14); --text:#E9EFF9; --muted:#93A1B9; --dim:#5D6A82;
+  --accent:#4FD1FF; --accent-ink:#03141C;
+  --ok:#3DDC97; --warn:#FFB020; --danger:#FF4D5E; --gold:#FFC94A;
+  --t-red:#FF4D5E; --t-blue:#3D8BFF; --t-purple:#B06BFF; --t-green:#33D17A;
+  --t-yellow:#FFD23F; --t-orange:#FF8A3D; --t-cyan:#2EE6F0; --t-pink:#FF6FB5;
+  --f-display:"Chakra Petch", "Arial Narrow", "Roboto Condensed", system-ui, sans-serif;
+  --f-body:"Barlow", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --r:14px;
+}
+*{box-sizing:border-box}
+html,body{background:var(--bg);color:var(--text)}
+body{font-family:var(--f-body);font-size:15px;line-height:1.45;-webkit-font-smoothing:antialiased;
+  padding-left:max(16px, env(safe-area-inset-left, 0px));padding-right:max(16px, env(safe-area-inset-right, 0px));padding-block:0}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.num{font-variant-numeric:tabular-nums}
+#app{max-width:720px;margin:0 auto;padding-bottom:calc(84px + env(safe-area-inset-bottom,0px))}
+#app.live-mode{padding-bottom:calc(96px + env(safe-area-inset-bottom,0px))}
+
+/* En-tête */
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);display:flex;align-items:center;gap:10px;padding-block:12px 10px}
+.top h1{font-family:var(--f-display);font-weight:700;font-size:22px;letter-spacing:.02em;margin:0;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-wrap:balance}
+.iconbtn{width:38px;height:38px;border-radius:50%;border:1px solid var(--line);background:var(--surface);display:grid;place-items:center;flex:none}
+.iconbtn svg{width:18px;height:18px}
+.sync{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px;white-space:nowrap}
+.sync i{width:8px;height:8px;border-radius:50%;background:var(--dim);display:inline-block}
+.sync.on i{background:var(--ok)} .sync.wait i{background:var(--warn)}
+
+/* Onglets */
+.tabs{position:fixed;left:0;right:0;bottom:0;z-index:6;background:rgba(10,14,22,.94);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-top:1px solid var(--line);
+  display:grid;grid-template-columns:repeat(5,1fr);padding:6px max(8px, env(safe-area-inset-right,0px)) calc(6px + env(safe-area-inset-bottom,0px)) max(8px, env(safe-area-inset-left,0px))}
+.tabs button{background:none;border:0;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 0;color:var(--dim);font-size:11px;font-weight:600}
+.tabs button svg{width:22px;height:22px}
+.tabs button[aria-current="page"]{color:var(--accent)}
+
+/* Blocs */
+.stack{display:flex;flex-direction:column;gap:14px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px}
+.card.flush{padding:4px 14px}
+.label{font-family:var(--f-display);font-size:12px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);display:flex;justify-content:space-between;gap:8px;align-items:baseline}
+.label small{letter-spacing:0;text-transform:none;font-family:var(--f-body);font-weight:500;color:var(--dim);font-size:12px}
+.muted{color:var(--muted)} .dim{color:var(--dim)}
+.row{display:flex;align-items:center;gap:12px;min-width:0}
+.row>.grow{flex:1;min-width:0}
+.list>*{padding-block:11px;border-bottom:1px solid var(--line)}
+.list>*:last-child{border-bottom:0}
+.tap{background:none;border:0;width:100%;text-align:left;padding-inline:0}
+.ellipsis{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dot{width:11px;height:11px;border-radius:50%;flex:none;display:inline-block;box-shadow:0 0 8px var(--c, transparent);background:var(--c)}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:3px 9px;border-radius:999px;background:var(--surface-3);font-size:12px;font-weight:600;color:var(--accent)}
+.pill{font-size:11px;font-weight:700;letter-spacing:.06em;padding:2px 7px;border-radius:6px;text-transform:uppercase}
+.pill.out{background:var(--danger);color:#1A0306}
+.pill.live{background:rgba(61,220,151,.15);color:var(--ok)}
+.pill.pause{background:rgba(255,176,32,.15);color:var(--warn)}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.tile{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px;min-width:0}
+.tile b{display:block;font-family:var(--f-display);font-size:26px;font-weight:700;line-height:1.1;font-variant-numeric:tabular-nums}
+.tile span{font-size:12px;color:var(--muted);font-weight:600}
+.btn{border:0;border-radius:12px;padding:13px 16px;font-weight:700;background:var(--surface-3);display:inline-flex;align-items:center;justify-content:center;gap:8px}
+.btn.primary{background:var(--accent);color:var(--accent-ink)}
+.btn.danger{background:rgba(255,77,94,.16);color:var(--danger);border:1px solid rgba(255,77,94,.5)}
+.btn.ghost{background:none;border:1px solid var(--line)}
+.btn.block{width:100%}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.link{background:none;border:0;color:var(--accent);font-weight:600;padding:6px 0}
+.seg{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:3px}
+.seg button{border:0;background:none;padding:8px 6px;border-radius:9px;font-weight:600;color:var(--muted);font-size:14px}
+.seg button[aria-pressed="true"]{background:var(--surface-3);color:var(--text)}
+.field{display:flex;flex-direction:column;gap:6px}
+.field>span{font-size:12px;font-weight:600;color:var(--muted)}
+.input{width:100%;background:var(--surface-2);border:1px solid var(--line);border-radius:10px;padding:11px 12px}
+.check{width:24px;height:24px;border-radius:50%;border:2px solid var(--dim);display:grid;place-items:center;flex:none}
+.check.on{background:var(--c, var(--accent));border-color:var(--c, var(--accent))}
+.check.on::after{content:"";width:7px;height:12px;border:solid var(--accent-ink);border-width:0 2.5px 2.5px 0;transform:translateY(-1px) rotate(45deg)}
+.stepper{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.stepper .ctl{display:flex;align-items:center;gap:2px;background:var(--surface-2);border:1px solid var(--line);border-radius:10px}
+.stepper .ctl button{width:40px;height:36px;border:0;background:none;font-size:20px;font-weight:600}
+.stepper .ctl output{min-width:62px;text-align:center;font-weight:700;font-variant-numeric:tabular-nums;font-size:14px}
+.toggle{position:relative;width:48px;height:28px;border-radius:999px;background:var(--surface-3);border:0;flex:none}
+.toggle::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:var(--text);transition:transform .15s}
+.toggle[aria-pressed="true"]{background:var(--ok)}
+.toggle[aria-pressed="true"]::after{transform:translateX(20px)}
+.note{font-size:13px;color:var(--muted)}
+.hero{display:flex;gap:14px;align-items:center;padding-block:4px}
+.hero .mark{width:54px;height:54px;flex:none}
+.hero h2{font-family:var(--f-display);font-size:30px;font-weight:700;letter-spacing:.06em;margin:0;line-height:1}
+.hero p{margin:4px 0 0;color:var(--muted)}
+.empty{text-align:center;padding:22px 12px;display:flex;flex-direction:column;gap:10px;align-items:center}
+.empty h3{margin:0;font-family:var(--f-display);font-size:19px}
+.empty p{margin:0;color:var(--muted);max-width:42ch}
+.modecard{border:1px solid var(--line);background:var(--surface);border-radius:12px;padding:12px;text-align:left;width:100%}
+.modecard[aria-pressed="true"]{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+.modecard b{font-family:var(--f-display);font-size:16px}
+.avatar{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;font-family:var(--f-display);font-weight:700;font-size:14px;flex:none;background:color-mix(in srgb, var(--c, var(--accent)) 22%, transparent);border:1.5px solid var(--c, var(--accent))}
+.vd{width:24px;height:24px;border-radius:50%;display:grid;place-items:center;font-size:11px;font-weight:800;color:#06110C;flex:none}
+
+/* Live */
+.clock{font-family:var(--f-display);font-weight:700;font-size:clamp(56px,19vw,92px);line-height:1;text-align:center;font-variant-numeric:tabular-nums;letter-spacing:.02em}
+.clockmeta{text-align:center;font-family:var(--f-display);font-size:12px;font-weight:600;letter-spacing:.16em;color:var(--muted);margin-top:4px}
+.board{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);gap:10px}
+.team{border-radius:var(--r);background:var(--surface);border:1px solid var(--line);padding:10px 8px 12px;text-align:center;position:relative;overflow:hidden;min-width:0}
+.team::before{content:"";position:absolute;inset:0 0 auto;height:4px;background:var(--c);box-shadow:0 0 14px var(--c)}
+.team.lead{border-color:color-mix(in srgb, var(--c) 70%, transparent)}
+.team .nm{font-weight:700;font-size:14px;margin-top:4px}
+.team .sc{font-family:var(--f-display);font-weight:700;font-size:44px;line-height:1.05;color:var(--c);font-variant-numeric:tabular-nums}
+.team .sub{font-size:11px;color:var(--muted);font-weight:600}
+.team.down{opacity:.45}
+.prow{display:flex;align-items:center;gap:10px;padding-block:10px;border-bottom:1px solid var(--line)}
+.prow:last-child{border-bottom:0}
+.prow .who{flex:1;min-width:0;background:none;border:0;text-align:left;padding:0}
+.prow .who b{font-size:16px}
+.prow.down .who b{text-decoration:line-through;color:var(--muted)}
+.pts{text-align:center;min-width:42px}
+.pts b{font-family:var(--f-display);font-size:24px;display:block;line-height:1;font-variant-numeric:tabular-nums}
+.pts small{font-size:11px;color:var(--muted)}
+.rb{width:48px;height:48px;border-radius:50%;display:grid;place-items:center;flex:none;font-weight:800;font-size:22px}
+.large .rb{width:58px;height:58px}
+.rb.hit{background:rgba(255,77,94,.14);border:1.5px solid var(--danger);color:var(--danger)}
+.rb.plus{background:rgba(79,209,255,.12);border:1.5px solid var(--accent);color:var(--accent)}
+.rb svg{width:22px;height:22px}
+.rb:disabled{opacity:.3}
+.hearts{display:flex;gap:2px;color:var(--danger);font-size:12px;line-height:1}
+.hearts .x{color:var(--dim)}
+.bar{display:flex;align-items:center;gap:8px;max-width:180px}
+.bar .tr{flex:1;height:6px;border-radius:9px;background:var(--surface-3);overflow:hidden}
+.bar .fl{height:100%;border-radius:9px;background:var(--c)}
+.bar span{font-size:12px;color:var(--muted);font-weight:700;min-width:26px;text-align:right;font-variant-numeric:tabular-nums}
+.controls{position:fixed;left:0;right:0;bottom:0;z-index:7;background:rgba(10,14,22,.95);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-top:1px solid var(--line);
+  padding:10px max(16px, env(safe-area-inset-right,0px)) calc(10px + env(safe-area-inset-bottom,0px)) max(16px, env(safe-area-inset-left,0px))}
+.controls .in{max-width:720px;margin:0 auto;display:flex;gap:10px}
+.controls .main{flex:1;height:56px;border-radius:14px;border:0;font-family:var(--f-display);font-weight:700;font-size:20px;letter-spacing:.08em;color:var(--accent-ink);background:var(--accent)}
+.controls .main.pausebtn{background:var(--warn)}
+.controls .sq{width:56px;height:56px;border-radius:14px;border:1px solid var(--line);background:var(--surface-2);display:grid;place-items:center}
+.controls .sq svg{width:22px;height:22px}
+.controls .sq.end{border-color:rgba(255,77,94,.6);color:var(--danger);background:rgba(255,77,94,.12)}
+.large .controls .main,.large .controls .sq{height:66px}
+.zonebtn{border-radius:999px;padding:7px 12px;font-size:13px;font-weight:700;border:1.5px solid var(--c);color:var(--c);background:none;white-space:nowrap}
+.zonebtn[aria-pressed="true"]{background:var(--c);color:#0A0E16}
+.zone{display:flex;align-items:center;gap:10px}
+.zone .zl{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;font-family:var(--f-display);font-weight:700;font-size:18px;flex:none;background:var(--c, var(--surface-3));color:#0A0E16}
+.zone .opts{display:flex;gap:6px;overflow-x:auto;min-width:0;padding-block:2px}
+.log{display:flex;flex-direction:column;gap:6px;font-size:13px}
+.log div{display:flex;gap:10px;color:var(--muted)}
+.log time{color:var(--dim);font-variant-numeric:tabular-nums;flex:none}
+
+/* Fenêtres */
+.sheet{position:fixed;inset:0;z-index:20;background:rgba(3,6,12,.72);display:flex;align-items:flex-end;justify-content:center}
+.sheet .panel{background:var(--surface);border-top-left-radius:20px;border-top-right-radius:20px;border:1px solid var(--line);width:100%;max-width:720px;max-height:88%;overflow:auto;
+  padding:18px max(16px, env(safe-area-inset-right,0px)) calc(18px + env(safe-area-inset-bottom,0px)) max(16px, env(safe-area-inset-left,0px))}
+.sheet h3{font-family:var(--f-display);font-size:20px;margin:0 0 6px}
+.countdown{position:fixed;inset:0;z-index:30;background:rgba(3,6,12,.92);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px}
+.countdown b{font-family:var(--f-display);font-size:160px;line-height:1;color:var(--accent);text-shadow:0 0 30px rgba(79,209,255,.6)}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(96px + env(safe-area-inset-bottom,0px));z-index:40;background:var(--surface-3);border:1px solid var(--line);padding:10px 16px;border-radius:12px;font-weight:600;max-width:90%}
+.winner{text-align:center;padding:20px 14px}
+.winner .cup{width:52px;height:52px;margin:0 auto 6px;color:var(--gold)}
+.winner h2{font-family:var(--f-display);font-size:28px;margin:0;color:var(--c, var(--text));text-wrap:balance}
+.tablewrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums;font-size:14px}
+th{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--dim);text-align:right;font-weight:700;padding:6px 4px}
+td{padding:8px 4px;border-top:1px solid var(--line);text-align:right}
+th:nth-child(2),td:nth-child(2){text-align:left}
+th:first-child,td:first-child{text-align:left;width:26px}
+.chart svg{width:100%;height:auto;display:block}
+.hbar{display:grid;grid-template-columns:minmax(0,9em) 1fr auto;gap:8px;align-items:center;font-size:13px}
+.hbar .tr{height:12px;background:var(--surface-3);border-radius:6px;overflow:hidden}
+.hbar .fl{height:100%;background:var(--accent);border-radius:6px}
+@media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important}}
+</style>
+
+<div id="app">
+  <header class="top" id="top"></header>
+  <main id="view" class="stack"></main>
+</div>
+<nav class="tabs" id="tabs" aria-label="Navigation principale"></nav>
+<div id="sheet" class="sheet" hidden></div>
+<div id="countdown" class="countdown" hidden></div>
+<div id="toast" class="toast" hidden></div>
+
+<script>
+"use strict";
+/* ============================================================
+   LASER ARENA — version web
+   Même logique que l'app iPhone : joueurs, équipes, 5 modes,
+   partie en direct avec annulation, résultats, statistiques.
+   Données : copie locale (hors ligne) + sauvegarde privée dans
+   votre compte Claude quand elle est disponible.
+   ============================================================ */
+
+/* ---------- Constantes ---------- */
+const COLORS = {
+  red:{name:"Rouge",v:"var(--t-red)"}, blue:{name:"Bleu",v:"var(--t-blue)"}, purple:{name:"Violet",v:"var(--t-purple)"},
+  green:{name:"Vert",v:"var(--t-green)"}, yellow:{name:"Jaune",v:"var(--t-yellow)"}, orange:{name:"Orange",v:"var(--t-orange)"},
+  cyan:{name:"Cyan",v:"var(--t-cyan)"}, pink:{name:"Rose",v:"var(--t-pink)"}
+};
+const COLOR_ORDER = ["red","blue","green","yellow","orange","cyan","pink","purple"];
+const colorAt = i => COLOR_ORDER[i % COLOR_ORDER.length];
+const cv = c => (COLORS[c] || COLORS.red).v;
+
+const MODES = {
+  tdm:  {title:"Team Deathmatch", ffa:false, scoreLimit:true, captures:false, zones:false,
+         sub:"Équipes contre équipes (Team Battle dans l'app Nerf). Réapparition illimitée : l'équipe qui marque le plus gagne.",
+         win:"Première équipe au score limite, sinon meilleur score à la fin du temps.",
+         base:{duration:10,healthMode:"hp",start:100,dmg:25,respawn:true,maxRespawns:0,respawnDelay:5,pph:1,ppe:3,scoreLimit:50}},
+  ffa:  {title:"Free For All", ffa:true, scoreLimit:true, captures:false, zones:false,
+         sub:"Chacun pour soi avec réapparition, comme le mode Free For All de l'app Nerf. Le meilleur score gagne.",
+         win:"Premier joueur au score limite, sinon meilleur score à la fin du temps.",
+         base:{duration:10,healthMode:"hp",start:100,dmg:25,respawn:true,maxRespawns:0,respawnDelay:5,pph:1,ppe:3,scoreLimit:30}},
+  lms:  {title:"Last Man Standing", ffa:true, scoreLimit:false, captures:false, zones:false,
+         sub:"Chacun pour soi (mode violet des blasters). Pas de réapparition : le dernier en vie gagne.",
+         win:"Dernier joueur en vie. À la fin du temps : le plus de santé restante.",
+         base:{duration:15,healthMode:"lives",start:5,respawn:false,pph:1,ppe:5}},
+  ctf:  {title:"Capture the Flag", ffa:false, scoreLimit:false, captures:true, zones:false,
+         sub:"Ramenez le drapeau adverse à votre base. Première équipe à la limite de captures.",
+         win:"Limite de captures atteinte, sinon le plus de captures (puis de points).",
+         base:{duration:15,healthMode:"hp",start:100,dmg:25,respawn:true,respawnDelay:5,pph:1,ppe:2,ppc:10,captureLimit:3}},
+  dom:  {title:"Domination", ffa:false, scoreLimit:true, captures:false, zones:true,
+         sub:"Contrôlez des zones. Chaque zone rapporte des points à intervalle régulier.",
+         win:"Première équipe au score limite, sinon meilleur score (zones + touches).",
+         base:{duration:15,healthMode:"hp",start:100,dmg:25,respawn:true,respawnDelay:5,pph:1,ppe:2,scoreLimit:150,zones:3,ppz:1,zoneTick:10}},
+  elim: {title:"Élimination", ffa:false, scoreLimit:false, captures:false, zones:false,
+         sub:"Équipes sans réapparition. La dernière équipe avec un joueur en vie gagne.",
+         win:"Dernière équipe en vie. À la fin du temps : le plus de joueurs en vie.",
+         base:{duration:10,healthMode:"lives",start:3,respawn:false,pph:1,ppe:3}}
+};
+const MODE_KEYS = Object.keys(MODES);
+
+const EQ_KINDS = {blaster:"Blaster", vest:"Gilet / cible", flag:"Drapeau", beacon:"Balise de zone", charger:"Chargeur / piles", other:"Autre"};
+const EQ_STATUS = {ready:{n:"Prêt",c:"var(--ok)"}, charging:{n:"En charge",c:"var(--warn)"}, check:{n:"À vérifier",c:"var(--t-orange)"}, broken:{n:"Hors service",c:"var(--danger)"}};
+
+const DEFAULT_SETTINGS = {duration:10, lives:5, hp:100, countdown:5, haptics:true, keepAwake:true, showLog:true, showRemaining:true, large:false};
+
+/* ---------- Petits outils ---------- */
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+const clock = s => { s = Math.max(0, Math.floor(s)); return String(Math.floor(s/60)).padStart(2,"0") + ":" + String(s%60).padStart(2,"0"); };
+const fmtDate = (t, time) => new Date(t).toLocaleDateString("fr-BE", time ? {day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"} : {day:"numeric",month:"short",year:"numeric"});
+const pct = v => Math.round(v * 100) + " %";
+const plural = (n, w) => n + " " + w + (n > 1 ? "s" : "");
+const initials = n => (n || "?").split(/\s+/).slice(0,2).map(w => w[0] || "").join("").toUpperCase() || "?";
+const clone = o => JSON.parse(JSON.stringify(o));
+const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+
+const ICON = {
+  home:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="2.5" fill="currentColor"/><path d="M12 1v4M12 19v4M1 12h4M19 12h4"/></svg>',
+  games:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21V4M5 4h11l-2 4 2 4H5"/></svg>',
+  people:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.6 3.4-5.5 6.5-5.5s5.7 1.9 6.5 5.5"/><circle cx="17" cy="9" r="2.6"/><path d="M17 14.5c2.4 0 4 1.5 4.6 4"/></svg>',
+  stats:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 20V11M10 20V5M16 20v-7M22 20H2"/></svg>',
+  gear:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>',
+  back:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>',
+  down:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>',
+  undo:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14L4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg>',
+  flag:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21V4M5 4h11l-2 4 2 4H5"/></svg>',
+  heart:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 0 0 0-7.8z"/><path d="M3 3l18 18"/></svg>',
+  plus:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>',
+  cup:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 3h10v3h3v2a4 4 0 0 1-4 4h-.3A5 5 0 0 1 13 15v3h3v3H8v-3h3v-3a5 5 0 0 1-2.7-3H8a4 4 0 0 1-4-4V6h3V3zm-1 5v0a2 2 0 0 0 1 1.7V8H6zm11 0v1.7A2 2 0 0 0 18 8h-1z"/></svg>'
+};
+const MARK = '<svg class="mark" viewBox="0 0 64 64" aria-hidden="true"><path d="M2 42 62 22" stroke="var(--t-red)" stroke-width="3" opacity=".9"/><path d="M2 22 62 42" stroke="var(--t-blue)" stroke-width="3" opacity=".9"/><circle cx="32" cy="32" r="15" fill="none" stroke="var(--accent)" stroke-width="3.5"/><circle cx="32" cy="32" r="4" fill="var(--accent)"/><path d="M32 6v10M32 48v10M6 32h10M48 32h10" stroke="var(--accent)" stroke-width="3.5" stroke-linecap="round"/></svg>';
+
+/* ---------- Données ---------- */
+let core = {players:[], teams:[], equipment:[], blasters:{}, settings:{...DEFAULT_SETTINGS}, modeRules:{}, updatedAt:0};
+let matches = {};                 // id -> partie
+let syncedIds = new Set();        // parties connues du serveur (pour propager les suppressions)
+const tombstones = new Set();     // parties supprimées ici, en attente de confirmation du serveur
+function removeMatch(id){ delete matches[id]; tombstones.add(id); queueWrite("match:" + id); }
+const LS = "laserarena.v1";
+
+function loadLocal(){
+  try {
+    const raw = localStorage.getItem(LS);
+    if (!raw) return;
+    const d = JSON.parse(raw);
+    if (d.core) core = {...core, ...d.core, settings:{...DEFAULT_SETTINGS, ...(d.core.settings||{})}};
+    matches = d.matches || {};
+    syncedIds = new Set(d.synced || []);
+  } catch (e) { /* pas de stockage local : l'app fonctionne quand même */ }
+}
+function saveLocal(){
+  try { localStorage.setItem(LS, JSON.stringify({core, matches, synced:[...syncedIds]})); } catch (e) {}
+}
+function touchCore(){ core.updatedAt = Date.now(); saveLocal(); queueWrite("core"); }
+function touchMatch(m){ m.updatedAt = Date.now(); trimEvents(m); saveLocal(); queueWrite("match:" + m.id); }
+
+/* ---------- Sauvegarde dans le compte Claude (privée) ---------- */
+let db = null, base = null, dbState = "local"; // local | wait | on
+const writes = new Map();
+async function initDb(){
+  try {
+    if (!window.claude || typeof window.claude.use !== "function") return;
+    const [dbNs, user] = await Promise.all([window.claude.use("db"), window.claude.use("user")]);
+    const id = user ? await user.id() : null;
+    if (!dbNs || !id) return;
+    db = dbNs; base = "data/users/" + id; dbState = "wait"; renderTop();
+    const coreRef = db.doc(base + "/core");
+    const loadTimer = setTimeout(() => { if (dbState === "wait") { renderTop(); } }, 10000);
+    coreRef.onSnapshot(snap => {
+      if (!snap.exists) { if (!snap.metadata.fromCache) { clearTimeout(loadTimer); dbState = "on"; renderTop(); if (core.updatedAt) queueWrite("core"); } return; }
+      const remote = clone(snap.data());
+      if ((remote.updatedAt || 0) > (core.updatedAt || 0)) {
+        core = {...core, ...remote, settings:{...DEFAULT_SETTINGS, ...(remote.settings||{})}};
+        saveLocal(); if (!isEditing()) render();
+      } else if ((remote.updatedAt || 0) < (core.updatedAt || 0)) queueWrite("core");
+      if (!snap.metadata.fromCache) { clearTimeout(loadTimer); dbState = "on"; renderTop(); }
+    }, () => { db = null; dbState = "local"; renderTop(); });
+    coreRef.collection("matches").onSnapshot(qs => {
+      if (qs.metadata.fromCache) return;
+      const seen = new Set();
+      let changed = false;
+      qs.docs.forEach(d => {
+        seen.add(d.id);
+        if (tombstones.has(d.id)) return;
+        const remote = clone(d.data());
+        const local = matches[d.id];
+        if (!local || (remote.updatedAt || 0) > (local.updatedAt || 0)) {
+          if (!(live.id === d.id && local)) { matches[d.id] = remote; changed = true; }
+        } else if ((remote.updatedAt || 0) < (local.updatedAt || 0)) queueWrite("match:" + d.id);
+      });
+      Object.keys(matches).forEach(id => {
+        if (!seen.has(id)) {
+          if (syncedIds.has(id)) { if (live.id !== id) { delete matches[id]; changed = true; } }
+          else queueWrite("match:" + id);
+        }
+      });
+      tombstones.forEach(id => { if (!seen.has(id)) tombstones.delete(id); });
+      syncedIds = seen; saveLocal();
+      if (changed && !isEditing()) render();
+    }, () => {});
+  } catch (e) { db = null; dbState = "local"; renderTop(); }
+}
+function queueWrite(key){
+  if (!db) return;
+  let w = writes.get(key);
+  if (!w) { w = {timer:null, running:false, dirty:false}; writes.set(key, w); }
+  clearTimeout(w.timer);
+  w.timer = setTimeout(() => flush(key), 700);
+}
+async function flush(key){
+  const w = writes.get(key); if (!w || !db) return;
+  if (w.running) { w.dirty = true; return; }
+  w.running = true;
+  try {
+    if (key === "core") await db.doc(base + "/core").set(clone(core));
+    else {
+      const id = key.slice(6);
+      const ref = db.doc(base + "/core").collection("matches").doc(id);
+      if (matches[id]) { await ref.set(clone(matches[id])); syncedIds.add(id); }
+      else { await ref.delete(); syncedIds.delete(id); }
+      saveLocal();
+    }
+  } catch (e) {
+    if (e && (e.code === "invalid_argument" || e.code === "not_granted" || e.code === "revoked")) { db = null; dbState = "local"; renderTop(); }
+    else if (e && e.code === "quota_exceeded") toast("Espace de sauvegarde plein : supprimez d'anciennes parties.");
+    else if (e && e.code === "unavailable") { w.running = false; setTimeout(() => flush(key), 1500 + Math.random()*1000); return; }
+  }
+  w.running = false;
+  if (w.dirty) { w.dirty = false; flush(key); }
+}
+
+/* ---------- Règles ---------- */
+function baseRules(mode){
+  return {duration:10, countdown:5, healthMode:"lives", start:5, dmg:10, respawn:false, maxRespawns:0, respawnDelay:0, powerups:false, upgMode:"none", upgAll:{hp:0, dmg:0, ammo:0, resp:0},
+          pph:1, ppe:3, scoreLimit:0, ppc:10, captureLimit:3, zones:3, ppz:1, zoneTick:10, ...MODES[mode].base};
+}
+function clampRules(r){
+  if (!r.upgMode) r.upgMode = "none";
+  r.upgAll = {hp:0, dmg:0, ammo:0, resp:0, ...(r.upgAll || {})};
+  const [lo, hi] = r.healthMode === "lives" ? [1,20] : [10,100];
+  r.start = clamp(r.start, lo, hi); r.zones = clamp(r.zones, 1, 5); r.zoneTick = Math.max(5, r.zoneTick);
+  return r;
+}
+function generatedRules(mode){
+  const r = baseRules(mode), s = core.settings;
+  r.duration = s.duration; r.countdown = s.countdown;
+  r.start = r.healthMode === "lives" ? s.lives : s.hp;
+  return clampRules(r);
+}
+function rulesFor(mode){ return core.modeRules[mode] ? clampRules(clone({...generatedRules(mode), ...core.modeRules[mode]})) : generatedRules(mode); }
+const dmgOf = r => r.healthMode === "lives" ? 1 : Math.max(1, r.dmg);
+const healthText = r => r.healthMode === "lives" ? plural(r.start, "vie") : r.start + " PV";
+
+/* ---------- Moteur de partie ---------- */
+const elapsed = (m, now = Date.now()) => m.acc + (m.resumedAt ? Math.max(0, (now - m.resumedAt) / 1000) : 0);
+const limitOf = m => m.rules.duration > 0 ? m.rules.duration * 60 : null;
+const isActive = m => m.phase === "playing" || m.phase === "paused";
+const allP = m => m.teams.flatMap(t => t.participants);
+const findP = (m, id) => allP(m).find(p => p.id === id);
+const findT = (m, id) => m.teams.find(t => t.id === id);
+const teamOf = (m, p) => m.teams.find(t => t.participants.includes(p));
+const score = t => t.participants.reduce((a, p) => a + p.points, 0) + t.objective;
+const aliveN = t => t.participants.filter(p => !p.out).length;
+const healthSum = t => t.participants.filter(p => !p.out).reduce((a, p) => a + p.health, 0);
+const pName = p => (core.players.find(x => x.id === p.playerId) || {}).name || p.name;
+
+function key(t, mode){
+  if (mode === "lms" || mode === "elim") {
+    const last = Math.max(0, ...t.participants.map(p => p.outAt || 0));
+    return [aliveN(t), healthSum(t), Math.floor(last), score(t)];
+  }
+  if (mode === "ctf") return [t.captures, score(t)];
+  return [score(t), aliveN(t)];
+}
+function cmp(a, b){ for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return a[i] > b[i] ? 1 : -1; return 0; }
+const rankedTeams = m => [...m.teams].sort((a, b) => cmp(key(b, m.mode), key(a, m.mode)) || a.order - b.order);
+function winnerOf(m){
+  const r = rankedTeams(m);
+  if (!r.length) return null;
+  if (r.length === 1) return r[0];
+  return cmp(key(r[0], m.mode), key(r[1], m.mode)) > 0 ? r[0] : null;
+}
+const rankedPlayers = m => [...allP(m)].sort((a, b) => b.points - a.points || b.elims - a.elims || a.kos - b.kos || b.hits - a.hits);
+const mvp = m => rankedPlayers(m)[0] || null;
+const bestShooter = m => allP(m).filter(p => p.hits > 0).sort((a, b) => b.hits - a.hits)[0] || null;
+const topElim = m => allP(m).filter(p => p.elims > 0).sort((a, b) => b.elims - a.elims)[0] || null;
+function survivor(m){
+  const al = allP(m).filter(p => !p.out).sort((a, b) => b.health - a.health || a.kos - b.kos);
+  if (al.length) return al[0];
+  return allP(m).sort((a, b) => (b.outAt || 0) - (a.outAt || 0))[0] || null;
+}
+
+/* Handicap : niveaux 0 à 3 → +1 vie ou +25 PV par niveau. */
+const bonusAmount = (r, lvl) => (lvl || 0) * (r.healthMode === "lives" ? 1 : 25);
+const maxH = (m, p) => p.maxH ?? m.rules.start;
+const waiting = p => p.waitUntil != null;
+function createMatch({name, date, mode, rules, teams, bonus = {}}){
+  const r = clampRules(clone(rules));
+  const m = {id:uid(), name, date, mode, rules:r, phase:"setup", acc:0, resumedAt:null, startedAt:null, endedAt:null,
+    winnerTeamId:null, winnerSummary:"", endReason:"", zoneOwners: MODES[mode].zones ? Array(r.zones).fill("") : [], zoneTicks:0,
+    teams: teams.map((t, i) => ({id:uid(), name:t.name, color:t.color, order:i, objective:0, captures:0,
+      participants: t.players.map(pl => ({id:uid(), playerId:pl.id, name:pl.name, points:0, hits:0, hitsTaken:0, elims:0, kos:0,
+        health:r.start + bonusAmount(r, bonus[pl.id]), maxH:r.start + bonusAmount(r, bonus[pl.id]), respawns:0, out:false, outAt:null, waitUntil:null, puUsed:false}))})),
+    events:[], updatedAt:Date.now()};
+  matches[m.id] = m; touchMatch(m);
+  return m;
+}
+
+/* État de l'écran Live (non enregistré) */
+const live = {id:null, proposal:null, overtime:false, dismissed:null, countdown:null, cdTimer:null, wake:null};
+
+const snapP = p => ({id:p.id, points:p.points, hits:p.hits, hitsTaken:p.hitsTaken, elims:p.elims, kos:p.kos, health:p.health, respawns:p.respawns, out:p.out, outAt:p.outAt, waitUntil:p.waitUntil ?? null, puUsed:!!p.puUsed});
+const snapT = t => ({id:t.id, objective:t.objective, captures:t.captures});
+function addLog(m, kind, text){ m.events.push({id:uid(), t:Date.now(), el:elapsed(m), kind, text}); }
+
+/* Toute action de jeu passe ici : copie avant/après pour pouvoir annuler, puis sauvegarde. */
+function record(m, kind, text, {ps = [], ts = [], zones = false}, fn){
+  if (!isActive(m)) return;
+  const ev = {id:uid(), t:Date.now(), el:elapsed(m), kind, text, undo:true, pb:ps.map(snapP), tb:ts.map(snapT)};
+  if (zones) ev.zb = [...m.zoneOwners];
+  fn();
+  ev.ta = ts.map(snapT);
+  m.events.push(ev);
+  haptic();
+  touchMatch(m);
+  evaluate(m);
+  render();
+}
+/* Garde le document léger : seules les 40 dernières actions restent annulables. */
+function trimEvents(m){
+  let n = 0;
+  for (let i = m.events.length - 1; i >= 0; i--) {
+    const e = m.events[i];
+    if (e.undo) { n++; if (n > 40) { e.undo = false; delete e.pb; delete e.tb; delete e.ta; delete e.zb; } }
+  }
+  if (m.events.length > 600) m.events.splice(0, m.events.length - 600);
+}
+const canRespawn = (p, r) => r.respawn && (r.maxRespawns === 0 || p.respawns < r.maxRespawns);
+function knockOut(m, v, s, r){
+  v.kos++;
+  if (s) { s.elims++; s.points += r.ppe; }
+  if (canRespawn(v, r)) {
+    v.respawns++;
+    const delay = r.respawnDelay || 0;
+    if (delay > 0) { v.health = 0; v.waitUntil = elapsed(m) + delay; } // hors jeu pendant le délai
+    else v.health = maxH(m, v);
+  }
+  else { v.out = true; v.outAt = elapsed(m); }
+}
+function registerHit(m, v, s, opts = {}){
+  if (v.out || waiting(v)) return;
+  const r = m.rules, extra = (s && r.healthMode === "hp" && s.dmgBonus) || 0;
+  const dmg = Math.max(1, dmgOf(r) * (opts.mult || 1) + extra), drop = v.health - dmg <= 0;
+  let text = s ? `${pName(s)} touche ${pName(v)}` : `${pName(v)} est touché`;
+  if (opts.pu) text = `⚡ Tir puissant de ${pName(s)} sur ${pName(v)}`;
+  if (drop) text += canRespawn(v, r) ? " · réapparition" : " · ÉLIMINÉ";
+  record(m, "hit", text, {ps: s ? [v, s] : [v]}, () => {
+    v.hitsTaken++; v.health = Math.max(0, v.health - dmg);
+    if (s) { s.hits++; s.points += r.pph; }
+    if (opts.pu && s) s.puUsed = true;
+    if (v.health === 0) knockOut(m, v, s, r);
+  });
+}
+function successHit(m, s){
+  if (s.out || waiting(s)) return;
+  record(m, "hit", `${pName(s)} marque une touche (+${m.rules.pph})`, {ps:[s]}, () => { s.hits++; s.points += m.rules.pph; });
+}
+function adjustPoints(m, p, d){
+  record(m, "points", `Correction points ${pName(p)} : ${d > 0 ? "+" : ""}${d}`, {ps:[p]}, () => { p.points += d; });
+}
+function adjustHealth(m, p, d){
+  const max = Math.max(maxH(m, p), m.rules.healthMode === "lives" ? 20 : 100);
+  const nv = clamp(p.health + d, 0, max);
+  if (nv === p.health) return;
+  record(m, "health", `Correction santé ${pName(p)} : ${d > 0 ? "+" : ""}${d}`, {ps:[p]}, () => {
+    p.health = nv;
+    if (nv === 0 && !p.out) { p.out = true; p.outAt = elapsed(m); }
+    else if (nv > 0 && p.out) { p.out = false; p.outAt = null; }
+    if (nv > 0) p.waitUntil = null;
+  });
+}
+function eliminate(m, p){ if (!p.out) record(m, "elim", `${pName(p)} est éliminé (manuel)`, {ps:[p]}, () => { p.health = 0; p.out = true; p.outAt = elapsed(m); p.waitUntil = null; }); }
+function revive(m, p){ record(m, "revive", `${pName(p)} revient en jeu`, {ps:[p]}, () => { p.out = false; p.outAt = null; p.waitUntil = null; p.health = maxH(m, p); }); }
+/* Bonus soin : sur soi (trousse de soin) ou sur un coéquipier (soin d'allié). */
+function healBonus(m, user, target){
+  if (user.puUsed || target.out || waiting(target)) return;
+  const amt = m.rules.healthMode === "lives" ? 2 : 50;
+  const text = user === target ? `⚡ Trousse de soin pour ${pName(user)}` : `⚡ ${pName(user)} soigne ${pName(target)}`;
+  record(m, "bonus", text, {ps: user === target ? [user] : [user, target]}, () => {
+    user.puUsed = true; target.health = Math.min(maxH(m, target), target.health + amt);
+  });
+}
+function adjustCaptures(m, t, d){
+  if (t.captures + d < 0) return;
+  record(m, "capture", d > 0 ? `Drapeau capturé par ${t.name}` : `Capture retirée à ${t.name}`, {ts:[t]}, () => { t.captures += d; t.objective += d * m.rules.ppc; });
+}
+const ZONE = i => "ABCDE"[i] || String(i + 1);
+function setZone(m, i, teamId){
+  if (m.zoneOwners[i] === teamId) return;
+  const t = findT(m, teamId);
+  record(m, "zone", t ? `Zone ${ZONE(i)} prise par ${t.name}` : `Zone ${ZONE(i)} neutralisée`, {zones:true}, () => { m.zoneOwners[i] = teamId; });
+}
+/* Points de zone calculés à partir du temps de jeu : rien n'est perdu si l'écran s'éteint. */
+function awardTicks(m, secs, doEval = true){
+  if (!MODES[m.mode].zones || m.rules.zoneTick <= 0) return false;
+  const due = Math.floor(secs / m.rules.zoneTick), miss = due - (m.zoneTicks || 0);
+  if (miss <= 0) return false;
+  m.zoneOwners.forEach(o => { const t = findT(m, o); if (t) t.objective += miss * m.rules.ppz; });
+  m.zoneTicks = due;
+  touchMatch(m);
+  if (doEval) evaluate(m);
+  return true;
+}
+function undoLast(m){
+  if (!isActive(m)) return;
+  const ev = [...m.events].reverse().find(e => e.undo);
+  if (!ev) return;
+  (ev.pb || []).forEach(s => { const p = findP(m, s.id); if (p) Object.assign(p, s); });
+  (ev.tb || []).forEach((b, i) => { const a = (ev.ta || [])[i], t = findT(m, b.id); if (t && a) { t.captures += b.captures - a.captures; t.objective += b.objective - a.objective; } });
+  if (ev.zb) m.zoneOwners = [...ev.zb];
+  m.events = m.events.filter(e => e !== ev);
+  addLog(m, "undo", "Annulé : " + ev.text);
+  live.dismissed = null;
+  haptic(true);
+  touchMatch(m); evaluate(m); render();
+}
+function freeze(m, secs){ m.acc = secs; m.resumedAt = null; m.phase = "paused"; }
+function startMatch(m){
+  if (m.phase !== "setup") return;
+  m.startedAt = Date.now(); m.resumedAt = Date.now(); m.acc = 0; m.phase = "playing";
+  addLog(m, "start", "Début de la partie"); btStart(m); touchMatch(m); render();
+}
+function togglePause(m){
+  if (m.phase === "playing") { freeze(m, elapsed(m)); addLog(m, "pause", "Pause"); }
+  else if (m.phase === "paused") {
+    const lim = limitOf(m);
+    if (lim && elapsed(m) >= lim) live.overtime = true;
+    m.resumedAt = Date.now(); m.phase = "playing";
+    addLog(m, "resume", live.overtime ? "Reprise (prolongation)" : "Reprise");
+  }
+  touchMatch(m); render();
+}
+function finishMatch(m, reason){
+  if (m.phase === "finished") return;
+  btEnd(m);
+  if (m.phase === "playing") { m.acc = elapsed(m); m.resumedAt = null; }
+  awardTicks(m, m.acc, false);
+  if (!m.startedAt) m.startedAt = Date.now();
+  const w = winnerOf(m);
+  m.winnerTeamId = w ? w.id : null;
+  m.winnerSummary = w ? (MODES[m.mode].ffa ? `${w.name} remporte la partie` : `Victoire de l'équipe ${w.name}`) : "Égalité";
+  m.endReason = reason; m.endedAt = Date.now(); m.phase = "finished";
+  live.proposal = null;
+  addLog(m, "end", "Fin de la partie : " + reason);
+  haptic(true);
+  touchMatch(m); render();
+}
+function victory(m){
+  const ts = m.teams; if (ts.length < 2) return null;
+  const al = ts.filter(t => aliveN(t) > 0);
+  if (al.length <= 1) {
+    if (al[0]) return {title:"Victoire de " + al[0].name, reason: MODES[m.mode].ffa ? `${al[0].name} est le dernier survivant` : `${al[0].name} est la dernière équipe en jeu`};
+    return {title:"Tous éliminés", reason:"Tous les joueurs sont éliminés"};
+  }
+  const r = m.rules;
+  if (MODES[m.mode].scoreLimit && r.scoreLimit > 0) { const t = ts.find(t => score(t) >= r.scoreLimit); if (t) return {title:"Victoire de " + t.name, reason:`${t.name} atteint ${r.scoreLimit} points`}; }
+  if (MODES[m.mode].captures && r.captureLimit > 0) { const t = ts.find(t => t.captures >= r.captureLimit); if (t) return {title:"Victoire de " + t.name, reason:`${t.name} atteint ${r.captureLimit} captures`}; }
+  return null;
+}
+/* Condition de victoire atteinte : pause + proposition. L'organisateur garde la main. */
+function evaluate(m){
+  if (!isActive(m) || live.id !== m.id) return;
+  const v = victory(m);
+  if (!v) { live.dismissed = null; return; }
+  if (live.proposal || live.dismissed === v.reason) return;
+  if (m.phase === "playing") { freeze(m, elapsed(m)); addLog(m, "pause", "Pause automatique : " + v.reason); touchMatch(m); }
+  haptic(true);
+  live.proposal = {...v, timeUp:false};
+}
+
+/* ---------- Statistiques ---------- */
+const finished = () => Object.values(matches).filter(m => m.phase === "finished");
+function playerStats(pid){
+  const s = {games:0, wins:0, losses:0, draws:0, points:0, hits:0, elims:0, kos:0, mvp:0, perf:[]};
+  finished().sort((a, b) => a.date - b.date).forEach(m => m.teams.forEach(t => t.participants.forEach(p => {
+    if (p.playerId !== pid) return;
+    s.games++; s.points += p.points; s.hits += p.hits; s.elims += p.elims; s.kos += p.kos;
+    const won = m.winnerTeamId === t.id;
+    if (won) s.wins++; else if (!m.winnerTeamId) s.draws++; else s.losses++;
+    if (mvp(m) && mvp(m).id === p.id) s.mvp++;
+    s.perf.push({date:m.date, points:p.points, won, name:m.name, matchId:m.id, team:t, p, draw:!m.winnerTeamId});
+  })));
+  s.rate = s.games ? s.wins / s.games : 0;
+  s.avg = s.games ? s.points / s.games : 0;
+  return s;
+}
+function teamStats(){
+  const tab = {};
+  finished().filter(m => !MODES[m.mode].ffa).forEach(m => m.teams.forEach(t => {
+    const e = tab[t.name] || (tab[t.name] = {name:t.name, color:t.color, games:0, wins:0, total:0});
+    e.games++; e.total += score(t); if (m.winnerTeamId === t.id) e.wins++;
+  }));
+  return Object.values(tab).map(e => ({...e, rate: e.games ? e.wins / e.games : 0, avg: e.games ? e.total / e.games : 0}))
+    .sort((a, b) => b.wins - a.wins || b.rate - a.rate);
+}
+function split(players, n, strategy){
+  const out = Array.from({length:n}, () => []);
+  const ordered = strategy === "random"
+    ? [...players].sort(() => Math.random() - .5)
+    : players.map(p => { const s = playerStats(p.id); return [p, (s.games ? s.avg + s.rate * 10 : 0) + Math.random() * .01]; }).sort((a, b) => b[1] - a[1]).map(x => x[0]);
+  ordered.forEach((p, i) => { const round = Math.floor(i / n), pos = i % n; out[round % 2 === 0 ? pos : n - 1 - pos].push(p); });
+  return out;
+}
+
+/* ---------- Navigation ---------- */
+let tab = "home";
+let stack = [{v:"home"}];
+let ui = {roster:"players", stats:"players", statSort:"wins", chartPlayer:null, gameFilter:"all", search:""};
+let draft = null, mr = null, form = null;
+const cur = () => stack[stack.length - 1];
+function go(v, params = {}){ stack.push({v, ...params}); render(); window.scrollTo(0, 0); }
+function back(){ if (stack.length > 1) stack.pop(); render(); window.scrollTo(0, 0); }
+function setTab(t){ tab = t; stack = [{v:t}]; render(); window.scrollTo(0, 0); }
+function isEditing(){ const a = document.activeElement; return a && (a.tagName === "INPUT" || a.tagName === "TEXTAREA"); }
+
+/* ---------- Rendu ---------- */
+const TABS = [["home","Accueil",ICON.home],["games","Parties",ICON.games],["roster","Effectif",ICON.people],["stats","Stats",ICON.stats],["settings","Réglages",ICON.gear]];
+function renderTabs(){
+  const liveMode = cur().v === "live";
+  $("#tabs").hidden = liveMode;
+  $("#tabs").innerHTML = TABS.map(([k, n, ic]) => `<button data-act="tab" data-k="${k}" ${tab === k ? 'aria-current="page"' : ""}>${ic}<span>${n}</span></button>`).join("");
+}
+function renderTop(){
+  const c = cur(), view = VIEWS[c.v];
+  if (!view) return;
+  const t = view.title ? view.title(c) : "";
+  const backBtn = c.v === "live"
+    ? `<button class="iconbtn" data-act="closeLive" aria-label="Réduire la partie">${ICON.down}</button>`
+    : stack.length > 1 ? `<button class="iconbtn" data-act="back" aria-label="Retour">${ICON.back}</button>` : "";
+  const sync = dbState === "on" ? `<span class="sync on"><i></i>Sauvegardé</span>`
+    : dbState === "wait" ? `<span class="sync wait"><i></i>Connexion…</span>`
+    : `<span class="sync"><i></i>Sur cet appareil</span>`;
+  $("#top").innerHTML = `${backBtn}<h1>${esc(t)}</h1>${view.right ? view.right(c) : sync}`;
+}
+function render(){
+  const c = cur(), view = VIEWS[c.v] || VIEWS.home;
+  $("#app").classList.toggle("live-mode", c.v === "live");
+  $("#app").classList.toggle("large", !!core.settings.large);
+  renderTabs(); renderTop();
+  $("#view").innerHTML = view.html(c);
+  if (c.v === "live") { renderLiveOverlays(); }
+}
+
+/* Composants */
+const dot = c => `<span class="dot" style="--c:${cv(c)}"></span>`;
+const tile = (label, val) => `<div class="tile"><b>${esc(val)}</b><span>${esc(label)}</span></div>`;
+function stepper(label, root, path, value, display, min, max, step = 1){
+  return `<div class="stepper"><span>${esc(label)}</span><div class="ctl">
+    <button data-act="step" data-root="${root}" data-path="${path}" data-d="${-step}" data-min="${min}" data-max="${max}" aria-label="Moins" ${value <= min ? "disabled" : ""}>−</button>
+    <output>${esc(display)}</output>
+    <button data-act="step" data-root="${root}" data-path="${path}" data-d="${step}" data-min="${min}" data-max="${max}" aria-label="Plus" ${value >= max ? "disabled" : ""}>+</button></div></div>`;
+}
+const toggle = (label, root, path, on) => `<div class="stepper"><span>${esc(label)}</span><button class="toggle" data-act="toggle" data-root="${root}" data-path="${path}" aria-pressed="${!!on}" aria-label="${esc(label)}"></button></div>`;
+function matchRow(m){
+  const st = m.phase === "finished" ? `<span class="dim ellipsis" style="color:${m.winnerTeamId ? cv((findT(m, m.winnerTeamId)||{}).color) : "var(--muted)"}">${esc(m.winnerSummary)}</span>`
+    : m.phase === "playing" ? `<span class="pill live">En cours</span>` : m.phase === "paused" ? `<span class="pill pause">En pause</span>` : `<span class="dim">Prête</span>`;
+  return `<button class="tap" data-act="openMatch" data-id="${m.id}">
+    <div class="row"><b class="grow ellipsis">${esc(m.name)}</b><span class="dim num" style="font-size:13px">${fmtDate(m.date)}</span></div>
+    <div class="row" style="margin-top:4px;font-size:14px"><span class="chip">${esc(MODES[m.mode].title)}</span>
+      <span class="grow row" style="gap:10px">${rankedTeams(m).slice(0,4).map(t => `<span class="row num" style="gap:5px">${dot(t.color)}<b>${score(t)}</b></span>`).join("")}</span>${st}</div></button>`;
+}
+function healthView(p, r, color, max = r.start){
+  if (r.healthMode === "lives" && max <= 10) {
+    let h = ""; for (let i = 0; i < max; i++) h += i < p.health ? "♥" : '<span class="x">♡</span>';
+    return `<div class="hearts" aria-label="${p.health} vies">${h}</div>`;
+  }
+  const f = max ? clamp(p.health / max, 0, 1) : 0;
+  const c = f > .5 ? cv(color) : f > .25 ? "var(--warn)" : "var(--danger)";
+  return `<div class="bar"><div class="tr"><div class="fl" style="width:${f*100}%;--c:${c}"></div></div><span>${p.health}</span></div>`;
+}
+
+/* ---------- Écrans ---------- */
+const VIEWS = {};
+
+VIEWS.home = {
+  title: () => "Laser Arena",
+  html(){
+    const fin = finished().sort((a, b) => (b.endedAt||b.date) - (a.endedAt||a.date));
+    const active = Object.values(matches).filter(isActive);
+    const ready = Object.values(matches).filter(m => m.phase === "setup");
+    const last = fin[0];
+    let h = `<div class="hero">${MARK}<div><h2>LASER ARENA</h2><p>Organisation de parties de laser tag</p></div></div>`;
+    active.forEach(m => {
+      h += `<button class="card tap row" data-act="openMatch" data-id="${m.id}" style="border-color:${m.phase === "playing" ? "var(--ok)" : "var(--warn)"};padding:14px">
+        <div class="grow"><span class="pill ${m.phase === "playing" ? "live" : "pause"}">${m.phase === "playing" ? "Partie en cours" : "Partie en pause"}</span><div style="font-weight:700;margin-top:6px">${esc(m.name)}</div></div><b style="color:var(--accent)">Reprendre ›</b></button>`;
+    });
+    if (!core.players.length) {
+      h += `<div class="card empty"><h3>Bienvenue</h3><p>Commencez par ajouter vos joueurs, ou chargez un exemple (8 joueurs, 2 équipes, 5 parties terminées) pour découvrir l'app.</p>
+        <div class="row" style="flex-wrap:wrap;justify-content:center"><button class="btn primary" data-act="addPlayer">Ajouter un joueur</button><button class="btn ghost" data-act="demo">Charger l'exemple</button></div></div>`;
+    }
+    h += `<button class="btn primary block" data-act="newGame" ${core.players.length < 2 ? "disabled" : ""} style="font-size:17px;padding:16px">＋ Nouvelle partie</button>`;
+    if (core.players.length && core.players.length < 2) h += `<p class="note" style="margin:-6px 0 0;text-align:center">Ajoutez au moins 2 joueurs dans Effectif.</p>`;
+    h += `<div class="grid2">${tile("Parties jouées", fin.length)}${tile("Joueurs", core.players.length)}${tile("Équipes", core.teams.length)}${tile("Matériel prêt", core.equipment.filter(e => e.status === "ready").length + "/" + core.equipment.length)}</div>`;
+    if (last) {
+      const w = findT(last, last.winnerTeamId), b = mvp(last);
+      h += `<div class="label">Dernière partie</div><button class="card tap" data-act="openMatch" data-id="${last.id}" style="border-color:${w ? cv(w.color) : "var(--line)"}">
+        <div class="row"><span class="chip">${esc(MODES[last.mode].title)}</span><span class="grow"></span><span class="dim num" style="font-size:13px">${fmtDate(last.date, true)}</span></div>
+        <div style="font-family:var(--f-display);font-size:22px;font-weight:700;margin-top:10px;color:${w ? cv(w.color) : "var(--text)"}">🏆 ${esc(last.winnerSummary)}</div>
+        <div class="board" style="margin-top:10px">${rankedTeams(last).slice(0,4).map(t => `<div style="text-align:center"><div class="num" style="font-family:var(--f-display);font-size:26px;font-weight:700">${score(t)}</div><div class="row" style="justify-content:center;gap:5px;font-size:12px;color:var(--muted)">${dot(t.color)}<span class="ellipsis">${esc(t.name)}</span></div></div>`).join("")}</div>
+        ${b ? `<div style="margin-top:10px;color:var(--gold);font-weight:600">★ MVP : ${esc(pName(b))} · ${b.points} pts</div>` : ""}</button>`;
+    }
+    if (fin.length > 1) h += `<div class="label">Derniers résultats</div><div class="card flush list">${fin.slice(1, 6).map(matchRow).join("")}</div>`;
+    if (ready.length) h += `<div class="label">Parties prêtes à lancer</div><div class="card flush list">${ready.map(matchRow).join("")}</div>`;
+    const toCheck = core.equipment.filter(e => e.status === "check" || e.status === "broken").length;
+    h += `<div class="label">État de l'application</div><div class="card list" style="padding-block:4px">
+      <div class="row"><span class="dot" style="--c:${dbState === "on" ? "var(--ok)" : "var(--warn)"}"></span><span>${dbState === "on" ? "Données sauvegardées dans votre compte Claude (privé)" : "Données enregistrées sur cet appareil"}</span></div>
+      <div class="row"><span class="dot" style="--c:var(--ok)"></span><span>Fonctionne sans réseau pendant la partie</span></div>
+      <div class="row"><span class="dot" style="--c:var(--ok)"></span><span>Scores : saisie manuelle par l'organisateur</span></div>
+      <div class="row"><span class="dot" style="--c:${toCheck ? "var(--warn)" : "var(--ok)"}"></span><span>${toCheck ? `Matériel : ${toCheck} élément(s) à vérifier` : "Matériel : rien à signaler"}</span></div></div>`;
+    return h;
+  }
+};
+
+VIEWS.games = {
+  title: () => "Parties",
+  html(){
+    const all = Object.values(matches).sort((a, b) => b.date - a.date);
+    const act = all.filter(isActive), ready = all.filter(m => m.phase === "setup");
+    const hist = all.filter(m => m.phase === "finished" && (ui.gameFilter === "all" || m.mode === ui.gameFilter));
+    let h = `<button class="btn primary block" data-act="newGame" ${core.players.length < 2 ? "disabled" : ""}>＋ Nouvelle partie</button>`;
+    if (act.length) h += `<div class="label">En cours</div><div class="card flush list">${act.map(matchRow).join("")}</div>`;
+    if (ready.length) h += `<div class="label">Prêtes à lancer</div><div class="card flush list">${ready.map(matchRow).join("")}</div>`;
+    h += `<div class="label">Historique et résultats <small>${hist.length}</small></div>
+      <select class="input" data-act-change="filter" aria-label="Filtrer par mode"><option value="all">Tous les modes</option>${MODE_KEYS.map(k => `<option value="${k}" ${ui.gameFilter === k ? "selected" : ""}>${MODES[k].title}</option>`).join("")}</select>`;
+    h += hist.length ? `<div class="card flush list">${hist.map(matchRow).join("")}</div>` : `<div class="card empty"><p>Aucune partie terminée${ui.gameFilter === "all" ? "" : " dans ce mode"} pour l'instant.</p></div>`;
+    return h;
+  }
+};
+
+VIEWS.roster = {
+  title: () => "Effectif",
+  right: () => `<button class="iconbtn" data-act="${ui.roster === "players" ? "addPlayer" : "newTeam"}" aria-label="Ajouter">${ICON.plus}</button>`,
+  html(){
+    let h = `<div class="seg"><button data-act="seg" data-k="roster" data-v="players" aria-pressed="${ui.roster === "players"}">Joueurs (${core.players.length})</button><button data-act="seg" data-k="roster" data-v="teams" aria-pressed="${ui.roster === "teams"}">Équipes (${core.teams.length})</button></div>`;
+    if (ui.roster === "players") {
+      if (!core.players.length) return h + `<div class="card empty"><h3>Aucun joueur</h3><p>Ajoutez les joueurs une seule fois : ils servent dans toutes les parties.</p><button class="btn primary" data-act="addPlayer">Ajouter un joueur</button></div>`;
+      const list = [...core.players].sort((a, b) => a.name.localeCompare(b.name, "fr"));
+      h += `<div class="card flush list">${list.map(p => { const s = playerStats(p.id), tm = core.teams.find(t => t.playerIds.includes(p.id));
+        return `<button class="tap row" data-act="openPlayer" data-id="${p.id}"><span class="avatar" style="--c:${tm ? cv(tm.color) : "var(--accent)"}">${esc(initials(p.name))}</span>
+          <div class="grow"><b>${esc(p.name)}</b>${p.callsign ? `<div class="dim" style="font-size:13px">${esc(p.callsign)}</div>` : ""}</div>
+          <div style="text-align:right"><b class="num">${s.wins} V · ${s.losses} D</b><div class="dim num" style="font-size:12px">${plural(s.games, "partie")} · ${s.points} pts</div></div></button>`; }).join("")}</div>`;
+    } else {
+      h += `<button class="btn ghost block" data-act="autoSplit" ${core.players.length < 2 ? "disabled" : ""}>⇄ Répartition automatique des joueurs</button>
+        <p class="note" style="margin:-4px 0 0">Équilibrée selon les résultats passés, ou aléatoire. Vous pouvez ensuite déplacer les joueurs.</p>`;
+      if (!core.teams.length) return h + `<div class="card empty"><h3>Aucune équipe</h3><p>Créez une équipe à la main ou utilisez la répartition automatique.</p><button class="btn primary" data-act="newTeam">Créer une équipe</button></div>`;
+      h += `<div class="card flush list">${core.teams.map(t => `<button class="tap row" data-act="openTeam" data-id="${t.id}"><span style="width:6px;height:40px;border-radius:4px;background:${cv(t.color)};flex:none"></span>
+        <div class="grow"><b>${esc(t.name)}</b><div class="dim ellipsis" style="font-size:13px">${esc(t.playerIds.map(id => (core.players.find(p => p.id === id)||{}).name).filter(Boolean).join(", ") || "Aucun joueur")}</div></div>
+        <b class="num" style="font-family:var(--f-display);font-size:22px;color:${cv(t.color)}">${t.playerIds.length}</b></button>`).join("")}</div>`;
+    }
+    return h;
+  }
+};
+
+VIEWS.player = {
+  title: c => (core.players.find(p => p.id === c.id) || {}).name || "Joueur",
+  right: c => `<button class="link" data-act="editPlayer" data-id="${c.id}">Modifier</button>`,
+  html(c){
+    const p = core.players.find(x => x.id === c.id); if (!p) return `<div class="card empty"><p>Joueur introuvable.</p></div>`;
+    const s = playerStats(p.id);
+    let h = `<div class="row"><span class="avatar" style="width:60px;height:60px;font-size:22px">${esc(initials(p.name))}</span><div class="grow"><div style="font-family:var(--f-display);font-size:24px;font-weight:700">${esc(p.name)}</div>${p.callsign ? `<div class="muted">${esc(p.callsign)}</div>` : ""}</div></div>`;
+    h += `<div class="grid3">${tile("Parties", s.games)}${tile("Victoires", s.wins)}${tile("Défaites", s.losses)}${tile("Taux", pct(s.rate))}${tile("Points", s.points)}${tile("Moy./partie", s.avg.toFixed(1))}${tile("Touches", s.hits)}${tile("Éliminations", s.elims)}${tile("MVP", s.mvp)}</div>`;
+    if (s.perf.length) h += `<div class="label">Évolution des points <small>vert = victoire</small></div><div class="card chart">${lineChart(s.perf)}</div>`;
+    h += `<div class="label">Historique <small>${plural(s.games, "partie")}</small></div>`;
+    h += s.perf.length ? `<div class="card flush list">${[...s.perf].reverse().map(x => `<button class="tap row" data-act="openMatch" data-id="${x.matchId}">
+      <span class="vd" style="background:${x.won ? "var(--ok)" : x.draw ? "var(--dim)" : "var(--danger)"}">${x.won ? "V" : x.draw ? "N" : "D"}</span>
+      <div class="grow"><b class="ellipsis" style="display:block">${esc(x.name)}</b><div class="dim" style="font-size:12px">${dot(x.team.color)} ${fmtDate(x.date)}</div></div>
+      <div style="text-align:right"><b class="num">${x.points} pts</b><div class="dim num" style="font-size:12px">${x.p.hits} touches · ${x.p.elims} élim.</div></div></button>`).join("")}</div>`
+      : `<div class="card"><p class="muted" style="margin:0">Aucune partie terminée pour l'instant.</p></div>`;
+    h += `<button class="btn danger block" data-act="askDeletePlayer" data-id="${p.id}">Supprimer ce joueur</button>`;
+    return h;
+  }
+};
+
+VIEWS.team = {
+  title: c => c.id ? "Modifier l'équipe" : "Nouvelle équipe",
+  right: () => `<button class="link" data-act="saveTeam">Enregistrer</button>`,
+  html(c){
+    const f = form;
+    let h = `<label class="field"><span>Nom de l'équipe</span><input class="input" id="team-name" data-bind="form.name" value="${esc(f.name)}"></label>`;
+    h += `<div class="label">Couleur</div><div class="grid3" style="grid-template-columns:repeat(4,minmax(0,1fr))">${Object.keys(COLORS).map(k => `<button class="card tap" data-act="teamColor" data-k="${k}" style="text-align:center;padding:10px;${f.color === k ? `border-color:${cv(k)};box-shadow:inset 0 0 0 1px ${cv(k)}` : ""}">${dot(k)}<div style="font-size:12px;margin-top:4px">${COLORS[k].name}</div></button>`).join("")}</div>`;
+    h += `<div class="label">Joueurs <small>${f.ids.length} sélectionné(s)</small></div>`;
+    h += core.players.length ? `<div class="card flush list">${[...core.players].sort((a,b)=>a.name.localeCompare(b.name,"fr")).map(p => { const on = f.ids.includes(p.id); const other = core.teams.filter(t => t.id !== c.id && t.playerIds.includes(p.id)).map(t => t.name);
+      return `<button class="tap row" data-act="teamToggle" data-id="${p.id}"><span class="check ${on ? "on" : ""}" style="--c:${cv(f.color)}"></span><div class="grow"><b>${esc(p.name)}</b>${other.length ? `<div class="dim" style="font-size:12px">Aussi dans : ${esc(other.join(", "))}</div>` : ""}</div></button>`; }).join("")}</div>`
+      : `<div class="card"><p class="muted" style="margin:0">Ajoutez d'abord des joueurs.</p></div>`;
+    if (c.id) h += `<button class="btn danger block" data-act="deleteTeam" data-id="${c.id}">Supprimer l'équipe</button><p class="note" style="margin:-6px 0 0">Les joueurs et les résultats déjà joués sont conservés.</p>`;
+    return h;
+  }
+};
+
+VIEWS.autosplit = {
+  title: () => "Répartition auto",
+  right: () => form.groups ? `<button class="link" data-act="saveSplit">Enregistrer</button>` : "",
+  html(){
+    const f = form;
+    let h = `<div class="card stack">${stepper("Nombre d'équipes", "form", "n", f.n, f.n, 2, 4)}
+      <div class="seg"><button data-act="splitStrat" data-v="balanced" aria-pressed="${f.strategy === "balanced"}">Équilibrée</button><button data-act="splitStrat" data-v="random" aria-pressed="${f.strategy === "random"}">Aléatoire</button></div>
+      <button class="btn primary block" data-act="doSplit" ${f.ids.length < f.n ? "disabled" : ""}>${f.groups ? "Répartir à nouveau" : "Répartir"}</button></div>`;
+    if (!f.groups) {
+      h += `<div class="label">Joueurs présents <small>${f.ids.length}</small></div><div class="card flush list">${[...core.players].sort((a,b)=>a.name.localeCompare(b.name,"fr")).map(p => `<button class="tap row" data-act="splitToggle" data-id="${p.id}"><span class="check ${f.ids.includes(p.id) ? "on" : ""}"></span><b>${esc(p.name)}</b></button>`).join("")}</div>`;
+    } else {
+      f.groups.forEach((g, i) => {
+        h += `<div class="label"><span class="row" style="gap:6px">${dot(colorAt(i))} Équipe ${COLORS[colorAt(i)].name}</span><small>${g.length}</small></div><div class="card flush list">${g.map(pid => `<div class="row"><b class="grow">${esc((core.players.find(p => p.id === pid)||{}).name)}</b>
+          <select class="input" style="width:auto;padding:6px 8px" data-act-change="splitMove" data-id="${pid}" data-from="${i}" aria-label="Déplacer">${f.groups.map((_, j) => `<option value="${j}" ${j === i ? "selected" : ""}>${COLORS[colorAt(j)].name}</option>`).join("")}</select></div>`).join("") || `<div class="dim">Aucun joueur</div>`}</div>`;
+      });
+      h += `<p class="note">Enregistrer crée (ou met à jour) les équipes « Équipe Rouge », « Équipe Bleu »…</p>`;
+    }
+    return h;
+  }
+};
+
+function rulesEditor(root, r, mode){
+  const M = MODES[mode], hits = Math.ceil(r.start / Math.max(1, r.dmg));
+  let h = `<div class="label">Temps</div><div class="card stack">
+    ${stepper("Durée", root, "duration", r.duration, r.duration ? r.duration + " min" : "Illimitée", 0, 120)}
+    ${stepper("Compte à rebours", root, "countdown", r.countdown, r.countdown ? r.countdown + " s" : "Aucun", 0, 15)}
+    <p class="note" style="margin:0">À la fin du temps, la partie se met en pause : vous terminez ou jouez une prolongation.</p></div>`;
+  h += `<div class="label">Santé</div><div class="card stack">
+    <div class="seg"><button data-act="healthMode" data-root="${root}" data-v="lives" aria-pressed="${r.healthMode === "lives"}">Vies</button><button data-act="healthMode" data-root="${root}" data-v="hp" aria-pressed="${r.healthMode === "hp"}">Points de vie</button></div>
+    ${r.healthMode === "lives" ? stepper("Vies au départ", root, "start", r.start, r.start, 1, 20) : stepper("Points de vie au départ", root, "start", r.start, r.start + " PV", 10, 100, 10)}
+    ${r.healthMode === "hp" ? stepper("Dégâts par touche", root, "dmg", r.dmg, r.dmg + " PV", 5, 100, 5) : ""}
+    <p class="note" style="margin:0">${r.healthMode === "lives" ? "Chaque touche retire une vie." : `De 10 à 100 PV, comme le programme Circuit Playground. ${plural(hits, "touche")} pour mettre un joueur à 0.`}</p></div>`;
+  h += `<div class="label">Réapparition</div><div class="card stack">${toggle("Réapparition après élimination", root, "respawn", r.respawn)}
+    ${r.respawn ? stepper("Réapparitions max.", root, "maxRespawns", r.maxRespawns, r.maxRespawns ? r.maxRespawns : "Illimitées", 0, 20) : ""}
+    ${r.respawn ? stepper("Délai avant réapparition", root, "respawnDelay", r.respawnDelay || 0, r.respawnDelay ? r.respawnDelay + " s" : "Immédiat", 0, 30, 5) : ""}
+    <p class="note" style="margin:0">${r.respawn ? "Un joueur à 0 récupère toute sa santé (retour à la base)." : "Un joueur à 0 est éliminé jusqu'à la fin."}</p></div>`;
+  h += `<div class="label">Points</div><div class="card stack">${stepper("Points par touche", root, "pph", r.pph, r.pph, 0, 10)}${stepper("Bonus par élimination", root, "ppe", r.ppe, r.ppe, 0, 20)}
+    ${M.scoreLimit ? stepper("Score pour gagner", root, "scoreLimit", r.scoreLimit, r.scoreLimit || "Aucun", 0, 1000, 10) : ""}</div>`;
+  h += upgRulesBlock(root, r);
+  h += `<div class="label">Bonus</div><div class="card stack">${toggle("Bonus (1 par joueur et par partie)", root, "powerups", r.powerups)}
+    <p class="note" style="margin:0">Comme les power-ups de l'app Nerf : tir puissant (dégâts ×2), trousse de soin, ou soin d'un coéquipier. Chaque joueur en utilise un seul par partie, depuis sa fiche.</p></div>`;
+  if (M.captures) h += `<div class="label">Capture the Flag</div><div class="card stack">${stepper("Points par capture", root, "ppc", r.ppc, r.ppc, 0, 50, 5)}${stepper("Captures pour gagner", root, "captureLimit", r.captureLimit, r.captureLimit || "Aucune limite", 0, 10)}</div>`;
+  if (M.zones) h += `<div class="label">Domination</div><div class="card stack">${stepper("Nombre de zones", root, "zones", r.zones, r.zones, 1, 5)}${stepper("Points par zone", root, "ppz", r.ppz, r.ppz, 1, 10)}${stepper("Toutes les", root, "zoneTick", r.zoneTick, r.zoneTick + " s", 5, 60, 5)}
+    <p class="note" style="margin:0">Pendant la partie, indiquez qui contrôle chaque zone : les points s'ajoutent tout seuls.</p></div>`;
+  return h;
+}
+
+VIEWS.newgame = {
+  title: () => "Nouvelle partie",
+  html(){
+    const d = draft, M = MODES[d.mode];
+    const sel = core.players.filter(p => d.ids.includes(p.id));
+    const inSlot = i => sel.filter(p => d.assign[p.id] === i);
+    let h = `<label class="field"><span>Nom de la partie</span><input class="input" id="ng-name" data-bind="draft.name" value="${esc(d.name)}"></label>
+      <label class="field"><span>Date</span><input class="input" id="ng-date" type="datetime-local" data-bind="draft.dateStr" value="${esc(d.dateStr)}"></label>`;
+    h += `<div class="label">Mode de jeu</div><div class="stack" style="gap:8px">${MODE_KEYS.map(k => `<button class="modecard" data-act="pickMode" data-k="${k}" aria-pressed="${d.mode === k}"><b>${MODES[k].title}</b>${d.mode === k ? `<div class="muted" style="font-size:13px;margin-top:3px">${MODES[k].sub}</div>` : ""}</button>`).join("")}</div>`;
+    h += `<div class="label">Joueurs <small>${sel.length} sélectionné(s)</small></div><div class="card flush list">
+      <div class="row"><button class="link" data-act="ngAll">${d.ids.length === core.players.length ? "Tout désélectionner" : "Tout sélectionner"}</button></div>
+      ${[...core.players].sort((a,b)=>a.name.localeCompare(b.name,"fr")).map(p => `<button class="tap row" data-act="ngToggle" data-id="${p.id}"><span class="check ${d.ids.includes(p.id) ? "on" : ""}"></span><b class="grow">${esc(p.name)}</b>${p.callsign ? `<span class="dim" style="font-size:13px">${esc(p.callsign)}</span>` : ""}</button>`).join("")}</div>`;
+    if (M.ffa) h += `<p class="note" style="margin:0">Chacun pour soi : chaque joueur joue pour lui-même (barre violette sur les blasters Nerf).</p>`;
+    else {
+      h += `<div class="label">Équipes</div><div class="card stack">${stepper("Nombre d'équipes", "draft", "nslots", d.slots.length, d.slots.length, 2, 4)}
+        ${d.slots.map((s, i) => `<div class="row"><select class="input" style="width:auto;padding:8px" data-act-change="slotColor" data-i="${i}" aria-label="Couleur">${Object.keys(COLORS).map(k => `<option value="${k}" ${s.color === k ? "selected" : ""}>${COLORS[k].name}</option>`).join("")}</select>
+          <input class="input" id="slot-${i}" data-bind="draft.slots.${i}.name" value="${esc(s.name)}" aria-label="Nom de l'équipe ${i+1}"></div>`).join("")}
+        <div class="row" style="flex-wrap:wrap"><button class="btn ghost" data-act="ngSplit" data-v="balanced" ${sel.length < 2 ? "disabled" : ""}>Équilibrer</button><button class="btn ghost" data-act="ngSplit" data-v="random" ${sel.length < 2 ? "disabled" : ""}>Aléatoire</button>
+        ${core.teams.length ? `<select class="input" style="width:auto;flex:1" data-act-change="ngPreset" aria-label="Utiliser une équipe enregistrée"><option value="">Équipe enregistrée…</option>${d.slots.map((s, i) => core.teams.map(t => `<option value="${i}:${t.id}">${esc(t.name)} → équipe ${i+1}</option>`).join("")).join("")}</select>` : ""}</div></div>`;
+      d.slots.forEach((s, i) => {
+        const mem = inSlot(i);
+        h += `<div class="label"><span class="row" style="gap:6px">${dot(s.color)} ${esc(s.name)}</span><small>${mem.length}</small></div><div class="card flush list">${mem.map(p => `<div class="row"><b class="grow">${esc(p.name)}</b>
+          <select class="input" style="width:auto;padding:6px 8px" data-act-change="ngMove" data-id="${p.id}" aria-label="Déplacer ${esc(p.name)}">${d.slots.map((x, j) => `<option value="${j}" ${j === i ? "selected" : ""}>${esc(x.name)}</option>`).join("")}</select></div>`).join("") || `<div class="dim">Aucun joueur</div>`}</div>`;
+      });
+    }
+    if (sel.length) {
+      const unit = d.rules.healthMode === "lives" ? lvl => `+${lvl} vie${lvl > 1 ? "s" : ""}` : lvl => `+${lvl * 25} PV`;
+      h += `<details class="card" ${Object.values(d.bonus).some(Boolean) ? "open" : ""}><summary style="font-weight:600;cursor:pointer">Handicap (optionnel)</summary>
+        <p class="note">Donnez plus de santé à un joueur pour équilibrer petits et grands.</p><div class="list">${sel.map(p => `<div class="row"><b class="grow">${esc(p.name)}</b>
+        <select class="input" style="width:auto;padding:6px 8px" data-act-change="ngBonus" data-id="${p.id}" aria-label="Handicap ${esc(p.name)}">${[0,1,2,3].map(l => `<option value="${l}" ${(d.bonus[p.id]||0) === l ? "selected" : ""}>${l ? unit(l) : "Normal"}</option>`).join("")}</select></div>`).join("")}</div></details>`;
+    }
+    h += rulesEditor("draft.rules", d.rules, d.mode);
+    const msg = ngValidation();
+    h += `<div class="card stack" style="background:var(--surface-2)">${msg ? `<div style="color:var(--warn);font-weight:600">${esc(msg)}</div>` : ""}
+      <button class="btn primary block" data-act="createGame" data-launch="1" ${msg ? "disabled" : ""}>▶ Créer et ouvrir la partie</button>
+      <button class="btn ghost block" data-act="createGame" ${msg ? "disabled" : ""}>Enregistrer pour plus tard</button></div>`;
+    return h;
+  }
+};
+function ngValidation(){
+  const d = draft, sel = core.players.filter(p => d.ids.includes(p.id));
+  if (!d.name.trim()) return "Donnez un nom à la partie.";
+  if (sel.length < 2) return "Sélectionnez au moins 2 joueurs.";
+  if (!MODES[d.mode].ffa) for (let i = 0; i < d.slots.length; i++) if (!sel.some(p => d.assign[p.id] === i)) return `L'équipe ${d.slots[i].name} n'a aucun joueur.`;
+  return null;
+}
+function syncAssign(){
+  const d = draft;
+  Object.keys(d.assign).forEach(id => { if (!d.ids.includes(id) || d.assign[id] >= d.slots.length) delete d.assign[id]; });
+  d.ids.forEach(id => {
+    if (d.assign[id] != null) return;
+    const counts = d.slots.map((_, i) => Object.values(d.assign).filter(v => v === i).length);
+    d.assign[id] = counts.indexOf(Math.min(...counts));
+  });
+}
+
+VIEWS.live = {
+  title: c => (matches[c.id] || {}).name || "Partie",
+  right: () => "",
+  html(c){
+    const m = matches[c.id];
+    if (!m) return `<div class="card empty"><p>Cette partie n'existe plus.</p></div>`;
+    if (m.phase === "finished") return resultHtml(m, true);
+    const M = MODES[m.mode], r = m.rules;
+    let h = `<div class="row" style="font-size:13px;color:var(--muted);flex-wrap:wrap;gap:8px"><span class="chip">${M.title}</span><span>${healthText(r)}${r.respawn ? " · réapparition" + (r.respawnDelay ? " " + r.respawnDelay + " s" : "") : ""}${r.powerups ? " · bonus ⚡" : ""}${r.duration ? " · " + r.duration + " min" : ""}</span></div>`;
+    h += `<div class="card" style="padding:16px 10px 12px;${m.phase === "paused" ? "border-color:var(--warn)" : ""}"><div class="clock" id="clock">00:00</div><div class="clockmeta" id="clockmeta"></div></div>`;
+    if (!M.ffa) {
+      const lead = m.phase === "setup" ? null : winnerOf(m);
+      h += `<div class="board">${[...m.teams].sort((a,b)=>a.order-b.order).map(t => {
+        const val = m.mode === "ctf" ? t.captures : m.mode === "elim" ? aliveN(t) : score(t);
+        const sub = m.mode === "ctf" ? `drapeaux · ${score(t)} pts` : m.mode === "elim" ? `en jeu · ${score(t)} pts` : `pts · ${aliveN(t)}/${t.participants.length} en jeu`;
+        return `<div class="team ${lead && lead.id === t.id ? "lead" : ""} ${aliveN(t) ? "" : "down"}" style="--c:${cv(t.color)}"><div class="nm ellipsis">${lead && lead.id === t.id ? "👑 " : ""}${esc(t.name)}</div><div class="sc">${val}</div><div class="sub ellipsis">${sub}</div></div>`; }).join("")}</div>`;
+    } else h += rankingCard(m);
+    if (m.phase === "setup") h += btSetupCard(m);
+    if (m.phase === "setup") h += `<div class="card" style="border-color:var(--accent)"><b style="color:var(--accent)">Partie prête</b><p class="muted" style="margin:6px 0 0">Vérifiez les équipes puis appuyez sur DÉMARRER. Ensuite : ♥̸ = joueur touché, + = touche réussie, appui sur un nom = plus d'options.</p></div>`;
+    if (M.captures) h += `<div class="card stack"><div class="label">Drapeaux${r.captureLimit ? `<small>victoire à ${r.captureLimit}</small>` : ""}</div>${m.teams.map(t => `<div class="row">${dot(t.color)}<b class="grow ellipsis">${esc(t.name)}</b>
+      <button class="iconbtn" data-act="cap" data-t="${t.id}" data-d="-1" ${!isActive(m) || !t.captures ? "disabled" : ""} aria-label="Retirer une capture">−</button><b class="num" style="font-family:var(--f-display);font-size:24px;min-width:28px;text-align:center">${t.captures}</b>
+      <button class="btn" style="background:${cv(t.color)};color:#0A0E16;padding:9px 14px" data-act="cap" data-t="${t.id}" data-d="1" ${isActive(m) ? "" : "disabled"}>${ICON.flag.replace("<svg", '<svg width="16" height="16"')} Capture</button></div>`).join("")}</div>`;
+    if (M.zones) h += `<div class="card stack"><div class="label">Zones<small>+${r.ppz} pt / ${r.zoneTick} s</small></div>${m.zoneOwners.map((o, i) => { const ow = findT(m, o);
+      return `<div class="zone"><span class="zl" style="--c:${ow ? cv(ow.color) : "var(--surface-3)"};color:${ow ? "#0A0E16" : "var(--text)"}">${ZONE(i)}</span><div class="opts">
+        <button class="zonebtn" style="--c:var(--muted)" data-act="zone" data-i="${i}" data-t="" aria-pressed="${!ow}" ${isActive(m) ? "" : "disabled"}>Neutre</button>
+        ${m.teams.map(t => `<button class="zonebtn" style="--c:${cv(t.color)}" data-act="zone" data-i="${i}" data-t="${t.id}" aria-pressed="${o === t.id}" ${isActive(m) ? "" : "disabled"}>${esc(t.name)}</button>`).join("")}</div></div>`; }).join("")}</div>`;
+    const groups = M.ffa ? [{name:"Joueurs", color:"purple", participants:allP(m)}] : [...m.teams].sort((a,b)=>a.order-b.order);
+    groups.forEach(g => {
+      h += `<div class="card" style="padding-block:6px"><div class="label" style="padding-top:8px"><span class="row" style="gap:6px">${dot(g.color)} ${esc(g.name)}</span><small>${g.participants.filter(p => !p.out).length}/${g.participants.length} en jeu</small></div>
+      ${g.participants.map(p => { const tc = (teamOf(m, p) || g).color, can = isActive(m) && !p.out && !waiting(p);
+        const status = p.out ? '<span class="pill out">Éliminé</span>'
+          : waiting(p) ? `<span class="pill pause">Réapparition <span data-wait="${p.id}"></span></span>`
+          : p.respawns ? `<span class="dim" style="font-size:12px">↻${p.respawns}</span>` : "";
+        const pu = r.powerups && !p.puUsed && !p.out ? ' <span style="color:var(--gold)" title="Bonus disponible">⚡</span>' : "";
+        return `<div class="prow ${p.out ? "down" : ""}"><button class="who" data-act="pActions" data-p="${p.id}"><b>${esc(pName(p))}</b>${pu} ${status}
+          <div style="margin-top:5px">${healthView(p, r, tc, maxH(m, p))}</div><div class="dim num" style="font-size:12px;margin-top:3px">${p.hits} touches · ${p.elims} élim.${btBadge(m, p)}</div></button>
+          <div class="pts"><b>${p.points}</b><small>pts</small></div>
+          <button class="rb hit" data-act="hit" data-p="${p.id}" ${can ? "" : "disabled"} aria-label="${esc(pName(p))} est touché">${ICON.heart}</button>
+          <button class="rb plus" data-act="plus" data-p="${p.id}" ${can ? "" : "disabled"} aria-label="${esc(pName(p))} marque une touche">${ICON.plus}</button></div>`; }).join("")}</div>`;
+    });
+    if (!M.ffa) h += rankingCard(m);
+    if (core.settings.showLog) {
+      const evs = m.events.slice(-8).reverse();
+      h += `<div class="card stack"><div class="label">Journal<small>${m.events.length} événements</small></div><div class="log">${evs.map(e => `<div><time>${clock(e.el)}</time><span>${esc(e.text)}</span></div>`).join("") || `<div>Les actions apparaîtront ici.</div>`}</div></div>`;
+    }
+    h += `<div class="controls"><div class="in">
+      ${m.phase !== "setup" ? `<button class="sq" data-act="undo" aria-label="Annuler la dernière action" ${m.events.some(e => e.undo) && isActive(m) ? "" : "disabled"}>${ICON.undo}</button>` : ""}
+      <button class="main ${m.phase === "playing" ? "pausebtn" : ""}" data-act="mainLive">${m.phase === "setup" ? "▶ DÉMARRER" : m.phase === "playing" ? "❚❚ PAUSE" : "▶ REPRENDRE"}</button>
+      ${m.phase !== "setup" ? `<button class="sq end" data-act="askEnd" aria-label="Terminer la partie">${ICON.flag}</button>` : ""}</div></div>`;
+    return h;
+  }
+};
+function rankingCard(m){
+  const rk = rankedPlayers(m).slice(0, 5);
+  return `<div class="card stack"><div class="label">Classement provisoire</div><div class="list" style="display:block">${rk.map((p, i) => `<div class="row" style="padding-block:7px"><b class="num" style="width:20px;color:${i ? "var(--muted)" : "var(--gold)"}">${i+1}</b>${dot((teamOf(m, p)||{}).color)}<span class="grow ellipsis">${esc(pName(p))}</span><b class="num">${p.points} pts</b></div>`).join("")}</div></div>`;
+}
+function updateClock(){
+  const m = matches[live.id], el = $("#clock"); if (!m || !el) return;
+  const lim = limitOf(m), e = elapsed(m), useRem = core.settings.showRemaining && lim;
+  el.textContent = clock(useRem ? Math.max(0, lim - e) : e);
+  el.style.color = m.phase === "paused" ? "var(--warn)" : (useRem && lim - e <= 60 && m.phase === "playing") ? "var(--danger)" : "var(--text)";
+  const st = {setup:"PRÊTE", playing:"EN COURS", paused:"EN PAUSE"}[m.phase] || "";
+  $("#clockmeta").textContent = (useRem ? "TEMPS RESTANT" : "TEMPS ÉCOULÉ") + " · " + st;
+  document.querySelectorAll("[data-wait]").forEach(w => { const p = findP(m, w.dataset.wait); if (p && waiting(p)) w.textContent = Math.max(0, Math.ceil(p.waitUntil - e)) + " s"; });
+}
+function renderLiveOverlays(){
+  updateClock();
+  const m = matches[live.id];
+  if (m && live.proposal && m.phase !== "finished") {
+    const p = live.proposal;
+    openSheet(`<h3>${esc(p.title)}</h3><p class="muted">${esc(p.timeUp ? "La durée prévue est atteinte. Terminer la partie ou jouer une prolongation ?" : p.reason + ". Terminer la partie, ou continuer pour corriger une erreur ?")}</p>
+      <div class="stack" style="gap:8px;margin-top:12px"><button class="btn primary block" data-act="propEnd">Terminer la partie</button><button class="btn ghost block" data-act="propContinue">${p.timeUp ? "Prolongation" : "Continuer / corriger"}</button></div>`, true);
+  }
+}
+
+function resultHtml(m, inLive){
+  const w = findT(m, m.winnerTeamId);
+  let h = `<div class="card winner" style="--c:${w ? cv(w.color) : "var(--text)"};border-color:${w ? cv(w.color) : "var(--line)"}"><div class="cup">${ICON.cup}</div><h2>${esc(m.winnerSummary || "Partie")}</h2>
+    ${m.endReason ? `<p class="muted" style="margin:6px 0 0">${esc(m.endReason)}</p>` : ""}
+    <div class="row" style="justify-content:center;flex-wrap:wrap;gap:8px;margin-top:10px;font-size:13px;color:var(--muted)"><span class="chip">${MODES[m.mode].title}</span><span class="num">⏱ ${clock(m.acc)}</span><span>${fmtDate(m.date, true)}</span></div></div>`;
+  if (!MODES[m.mode].ffa) h += `<div class="label">Scores finaux</div><div class="stack" style="gap:8px">${rankedTeams(m).map((t, i) => `<div class="card row" style="${t.id === m.winnerTeamId ? `border-color:${cv(t.color)}` : ""}">
+    <b class="num" style="width:20px;color:${i ? "var(--muted)" : "var(--gold)"}">${i+1}</b><span style="width:5px;height:34px;border-radius:3px;background:${cv(t.color)}"></span>
+    <div class="grow"><b>${esc(t.name)}</b><div class="dim" style="font-size:12px">${MODES[m.mode].captures ? t.captures + " drapeau(x) · " : ""}${t.participants.length} joueurs · ${aliveN(t)} en jeu à la fin</div></div>
+    <b class="num" style="font-family:var(--f-display);font-size:28px;color:${cv(t.color)}">${score(t)}</b></div>`).join("")}</div>`;
+  const aw = (label, col, p, txt) => `<div class="tile"><span style="color:${col};font-weight:700;font-size:12px;letter-spacing:.06em;text-transform:uppercase">${label}</span><div style="font-weight:700;font-size:16px;margin-top:4px" class="ellipsis">${p ? esc(pName(p)) : "—"}</div><div class="dim" style="font-size:12px">${p ? txt(p) : ""}</div></div>`;
+  h += `<div class="label">Meilleurs joueurs</div><div class="grid2">${aw("★ MVP", "var(--gold)", mvp(m), p => p.points + " pts")}${aw("Meilleur tireur", "var(--accent)", bestShooter(m), p => p.hits + " touches")}
+    ${aw("Chasseur", "var(--danger)", topElim(m), p => p.elims + " élim.")}${aw("Survivant", "var(--t-blue)", survivor(m), p => p.out ? "tombé en dernier" : p.health + (m.rules.healthMode === "lives" ? " vie(s)" : " PV") + " restants")}</div>`;
+  h += `<div class="label">Classement individuel</div><div class="card tablewrap" style="padding:8px 12px"><table><thead><tr><th>#</th><th>Joueur</th><th>Pts</th><th>Tch</th><th>Élim</th><th>Mort</th></tr></thead><tbody>
+    ${rankedPlayers(m).map((p, i) => `<tr><td style="color:${i ? "var(--muted)" : "var(--gold)"}">${i+1}</td><td>${dot((teamOf(m, p)||{}).color)} ${esc(pName(p))}</td><td><b>${p.points}</b></td><td>${p.hits}</td><td>${p.elims}</td><td>${p.kos}</td></tr>`).join("")}</tbody></table></div>`;
+  h += `<details class="card"><summary style="font-weight:600;cursor:pointer">Déroulement de la partie (${m.events.length} événements)</summary><div class="log" style="margin-top:10px">${m.events.map(e => `<div><time>${clock(e.el)}</time><span>${esc(e.text)}</span></div>`).join("")}</div></details>`;
+  h += `<div class="row" style="flex-wrap:wrap"><button class="btn ghost" data-act="copyResult" data-id="${m.id}">Copier le résumé</button>${inLive ? `<button class="btn primary grow" data-act="closeLive">Fermer</button>` : `<button class="btn danger" data-act="askDeleteMatch" data-id="${m.id}">Supprimer</button>`}</div>`;
+  h += `<p class="note" style="margin:0">Résultats enregistrés automatiquement.</p>`;
+  return h;
+}
+VIEWS.result = { title: () => "Résultats", html: c => matches[c.id] ? resultHtml(matches[c.id], false) : `<div class="card empty"><p>Partie introuvable.</p></div>` };
+
+function lineChart(pts){
+  const W = 320, H = 150, L = 30, R = 10, T = 12, B = 22;
+  const max = Math.max(5, ...pts.map(p => p.points));
+  const top = Math.ceil(max / 5) * 5;
+  const x = i => pts.length === 1 ? L + (W - L - R) / 2 : L + i * (W - L - R) / (pts.length - 1);
+  const y = v => T + (H - T - B) * (1 - v / top);
+  const ticks = [0, top / 2, top];
+  let s = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Points par partie">`;
+  ticks.forEach(t => { s += `<line x1="${L}" x2="${W - R}" y1="${y(t)}" y2="${y(t)}" stroke="var(--line)" stroke-width="1"/><text x="${L - 6}" y="${y(t) + 4}" text-anchor="end" font-size="10" fill="var(--dim)">${t}</text>`; });
+  const path = pts.map((p, i) => `${i ? "L" : "M"}${x(i).toFixed(1)},${y(p.points).toFixed(1)}`).join("");
+  if (pts.length > 1) s += `<path d="${path} L${x(pts.length - 1)},${y(0)} L${x(0)},${y(0)} Z" fill="var(--accent)" opacity=".12"/><path d="${path}" fill="none" stroke="var(--accent)" stroke-width="2.2" stroke-linejoin="round"/>`;
+  pts.forEach((p, i) => { s += `<circle cx="${x(i)}" cy="${y(p.points)}" r="${i === pts.length - 1 ? 5 : 3.8}" fill="${p.won ? "var(--ok)" : "var(--danger)"}" stroke="var(--surface)" stroke-width="1.5"/>`; });
+  const first = pts[0], last = pts[pts.length - 1];
+  s += `<text x="${x(0)}" y="${H - 6}" font-size="10" fill="var(--dim)" text-anchor="${pts.length === 1 ? "middle" : "start"}">${fmtDate(first.date)}</text>`;
+  if (pts.length > 1) s += `<text x="${x(pts.length - 1)}" y="${H - 6}" font-size="10" fill="var(--dim)" text-anchor="end">${fmtDate(last.date)}</text>`;
+  return s + "</svg>";
+}
+
+VIEWS.stats = {
+  title: () => "Statistiques",
+  html(){
+    const fin = finished();
+    const totalPts = fin.reduce((a, m) => a + allP(m).reduce((b, p) => b + p.points, 0), 0);
+    const byMode = MODE_KEYS.map(k => ({k, n: fin.filter(m => m.mode === k).length})).filter(x => x.n).sort((a, b) => b.n - a.n);
+    let h = `<div class="grid2">${tile("Parties jouées", fin.length)}${tile("Joueurs", core.players.length)}${tile("Points marqués", totalPts)}${tile("Mode favori", byMode[0] ? MODES[byMode[0].k].title : "—")}</div>`;
+    h += `<div class="seg">${[["players","Joueurs"],["teams","Équipes"],["evolution","Évolution"]].map(([k, n]) => `<button data-act="seg" data-k="stats" data-v="${k}" aria-pressed="${ui.stats === k}">${n}</button>`).join("")}</div>`;
+    if (!fin.length) return h + `<div class="card empty"><h3>Pas encore de statistiques</h3><p>Terminez une première partie pour voir les classements.</p></div>`;
+    if (ui.stats === "players") {
+      const rows = core.players.map(p => ({p, s: playerStats(p.id)})).filter(r => r.s.games).sort((a, b) =>
+        ui.statSort === "points" ? b.s.points - a.s.points : ui.statSort === "rate" ? (b.s.rate - a.s.rate || b.s.wins - a.s.wins) : (b.s.wins - a.s.wins || b.s.rate - a.s.rate));
+      h += `<div class="seg">${[["wins","Victoires"],["rate","Taux"],["points","Points"]].map(([k, n]) => `<button data-act="seg" data-k="statSort" data-v="${k}" aria-pressed="${ui.statSort === k}">${n}</button>`).join("")}</div>`;
+      h += `<div class="card flush list">${rows.map((r, i) => `<button class="tap row" data-act="openPlayer" data-id="${r.p.id}"><b class="num" style="width:22px;color:${i ? "var(--muted)" : "var(--gold)"}">${i+1}</b><b class="grow ellipsis">${esc(r.p.name)}</b>
+        <div style="text-align:right"><b class="num">${r.s.wins} V / ${r.s.games} · ${pct(r.s.rate)}</b><div class="dim num" style="font-size:12px">${r.s.points} pts · ${r.s.elims} élim. · ${r.s.mvp} MVP</div></div></button>`).join("")}</div>`;
+    } else if (ui.stats === "teams") {
+      const ts = teamStats();
+      h += `<p class="note" style="margin:0">Équipes regroupées par nom (hors parties chacun pour soi).</p>`;
+      h += ts.length ? `<div class="card flush list">${ts.map((t, i) => `<div class="row"><b class="num" style="width:22px;color:${i ? "var(--muted)" : "var(--gold)"}">${i+1}</b>${dot(t.color)}<div class="grow"><b>${esc(t.name)}</b><div class="dim" style="font-size:12px">${plural(t.games, "partie")} · score moyen ${Math.round(t.avg)}</div></div>
+        <div style="text-align:right"><b class="num" style="font-family:var(--f-display);font-size:20px">${t.wins} V</b><div class="dim num" style="font-size:12px">${pct(t.rate)}</div></div></div>`).join("")}</div>` : `<div class="card"><p class="muted" style="margin:0">Aucune partie en équipes terminée.</p></div>`;
+    } else {
+      const act = core.players.filter(p => playerStats(p.id).games);
+      const sel = act.find(p => p.id === ui.chartPlayer) || act[0];
+      if (sel) h += `<div class="label">Points par partie</div><select class="input" data-act-change="chartPlayer" aria-label="Joueur">${act.map(p => `<option value="${p.id}" ${p.id === sel.id ? "selected" : ""}>${esc(p.name)}</option>`).join("")}</select><div class="card chart">${lineChart(playerStats(sel.id).perf)}</div>`;
+      const mx = Math.max(...byMode.map(x => x.n));
+      h += `<div class="label">Parties par mode</div><div class="card stack" style="gap:10px">${byMode.map(x => `<div class="hbar"><span class="ellipsis">${MODES[x.k].title}</span><div class="tr"><div class="fl" style="width:${x.n / mx * 100}%"></div></div><b class="num">${x.n}</b></div>`).join("")}</div>`;
+      const months = {};
+      fin.forEach(m => { const d = new Date(m.date), k = d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0"); months[k] = (months[k] || 0) + 1; });
+      const mk = Object.keys(months).sort(), mm = Math.max(...Object.values(months));
+      h += `<div class="label">Parties par mois</div><div class="card stack" style="gap:10px">${mk.map(k => `<div class="hbar"><span>${new Date(k + "-01T12:00").toLocaleDateString("fr-BE", {month:"short", year:"numeric"})}</span><div class="tr"><div class="fl" style="width:${months[k] / mm * 100}%;background:var(--t-blue)"></div></div><b class="num">${months[k]}</b></div>`).join("")}</div>`;
+    }
+    return h;
+  }
+};
+
+VIEWS.settings = {
+  title: () => "Réglages",
+  html(){
+    const s = core.settings;
+    let h = `<div class="label">Parties par défaut</div><div class="card stack">${stepper("Durée", "settings", "duration", s.duration, s.duration + " min", 1, 120)}${stepper("Vies", "settings", "lives", s.lives, s.lives, 1, 20)}
+      ${stepper("Points de vie", "settings", "hp", s.hp, s.hp + " PV", 10, 100, 10)}${stepper("Compte à rebours", "settings", "countdown", s.countdown, s.countdown ? s.countdown + " s" : "Aucun", 0, 15)}
+      <p class="note" style="margin:0">Utilisé pour les modes dont les règles n'ont pas été personnalisées.</p></div>`;
+    h += `<div class="label">Modes de jeu et règles</div><div class="card flush list">${MODE_KEYS.map(k => `<button class="tap row" data-act="openModeRules" data-k="${k}"><b class="grow">${MODES[k].title}</b>${core.modeRules[k] ? `<span class="chip">Personnalisé</span>` : ""}<span class="dim">›</span></button>`).join("")}</div>`;
+    h += `<div class="label">Affichage pendant la partie</div><div class="card stack">${toggle("Afficher le temps restant", "settings", "showRemaining", s.showRemaining)}${toggle("Grands boutons", "settings", "large", s.large)}
+      ${toggle("Afficher le journal", "settings", "showLog", s.showLog)}${toggle("Garder l'écran allumé", "settings", "keepAwake", s.keepAwake)}${toggle("Vibrations (Android)", "settings", "haptics", s.haptics)}</div>`;
+    h += `<div class="label">Matériel</div><div class="card flush list"><button class="tap row" data-act="openEquipment"><b class="grow">Matériel (Equipment)</b><span class="dim">${plural(core.equipment.length, "élément")} ›</span></button></div>`;
+    h += `<div class="label">Données</div><div class="card stack">
+      <div class="row muted" style="font-size:14px;flex-wrap:wrap;gap:14px"><span>${plural(core.players.length, "joueur")}</span><span>${plural(core.teams.length, "équipe")}</span><span>${plural(Object.keys(matches).length, "partie")}</span></div>
+      <p class="note" style="margin:0">${dbState === "on" ? "Sauvegarde privée dans votre compte Claude, plus une copie sur cet appareil pour jouer sans réseau." : "Données enregistrées sur cet appareil. Ouvrez la page connecté à claude.ai pour une sauvegarde dans votre compte."}</p>
+      <button class="btn ghost block" data-act="export">Exporter une sauvegarde (JSON)</button>
+      <label class="btn ghost block" style="cursor:pointer">Importer une sauvegarde<input type="file" accept=".json,application/json" data-act-change="import" hidden></label>
+      <button class="btn ghost block" data-act="demo">Charger les données d'exemple</button>
+      <button class="btn danger block" data-act="askDeleteHistory">Supprimer l'historique des parties</button>
+      <button class="btn danger block" data-act="askDeleteAll">Tout effacer</button></div>`;
+    h += `<div class="label">À propos</div><div class="card"><p class="muted" style="margin:0">Laser Arena reprend l'organisation de l'app Nerf Laser Ops Pro : équipes rouge et bleue, violet pour chacun pour soi, santé, compte à rebours, scores en direct. Application indépendante, non affiliée à Hasbro ni à Nerf. Les scores se saisissent à la main : le Bluetooth des blasters n'est pas documenté publiquement.</p></div>`;
+    return h;
+  }
+};
+
+VIEWS.moderules = {
+  title: c => MODES[c.k].title,
+  html(c){
+    const M = MODES[c.k];
+    return `<div class="card"><b style="color:var(--accent)">${M.title}</b><p class="muted" style="margin:6px 0">${M.sub}</p><p class="dim" style="margin:0;font-size:13px">Gagnant : ${M.win}</p></div>`
+      + rulesEditor("mr.rules", mr.rules, c.k)
+      + `<button class="btn danger block" data-act="resetMode" data-k="${c.k}">Rétablir les règles d'origine</button><p class="note" style="margin:0">Les changements sont enregistrés automatiquement et proposés à chaque nouvelle partie de ce mode.</p>`;
+  }
+};
+
+VIEWS.equipment = {
+  title: () => "Matériel",
+  right: () => `<button class="iconbtn" data-act="editEquip" aria-label="Ajouter du matériel">${ICON.plus}</button>`,
+  html(){
+    const conn = [...bt.list.values()];
+    let h = `<div class="card stack"><div class="label">Blasters Bluetooth<small>${btConnected().length} connecté(s)</small></div>
+      ${bt.supported ? `<button class="btn primary block" data-act="btAdd">＋ Connecter un blaster Nerf Laser Ops Pro</button>` : `<p class="muted" style="margin:0">Ce navigateur ne gère pas le Bluetooth : Chrome sur Android ou Mac, ou Bluefy sur iPhone.</p>`}
+      ${conn.length ? `<div class="list">${conn.map(b => `<div class="row"><button class="tap" style="width:auto" data-act="${b.key ? "editBlaster" : "noop"}" data-k="${esc(b.key || "")}"><b>${esc(bName(b))}</b> ✎</button><span class="grow dim" style="font-size:13px">${b.write ? "connecté" : "déconnecté"}${b.bat ? " · " + (b.bat / 100).toFixed(2) + " V" : ""}${b.ammoMax ? " · " + b.ammoMax + " munitions" : ""}</span>${b.write ? `<button class="btn ghost" style="padding:7px 10px" data-act="btBlink" data-id="${esc(b.id)}">Identifier</button>` : `<button class="btn ghost" style="padding:7px 10px" data-act="btRe" data-id="${esc(b.id)}">Reconnecter</button>`}</div>`).join("")}</div>` : ""}
+      <p class="note" style="margin:0">« Identifier » fait clignoter la LED du blaster. Touchez son nom pour le renommer ou l'améliorer. L'association blaster ↔ joueur se fait dans l'écran de la partie.</p></div>`;
+    const profs = Object.entries(core.blasters || {});
+    if (profs.length) h += `<div class="label">Blasters enregistrés<small>${profs.length}</small></div><div class="card flush list">${profs.map(([k, pr]) => {
+      const on = [...bt.list.values()].some(b => b.key === k && b.write);
+      return `<button class="tap row" data-act="editBlaster" data-k="${esc(k)}"><span class="dot" style="--c:${on ? "var(--ok)" : "var(--dim)"}"></span>
+        <div class="grow"><b>${esc(profName(k, pr))}</b><div class="dim" style="font-size:12px">${(PRESETS[presetOf(pr.upg || ZERO_UPG())] || {name:"Classe personnalisée"}).name} · ${esc(upgSummary(pr.upg))}</div></div><span class="dim">›</span></button>`; }).join("")}</div>
+      <p class="note" style="margin:0">La classe d'un blaster ne compte que dans les parties réglées sur « Propres à chaque blaster ». Choisissez le mode dans les règles de chaque partie.</p>`;
+    h += `<div class="card" style="background:var(--surface-2)"><b style="color:var(--accent)">Saisie manuelle des scores</b><p class="muted" style="margin:6px 0 0">Toujours disponible, avec ou sans blaster connecté : utile pour corriger une erreur ou jouer avec du matériel non connecté.</p></div>`;
+    h += `<div class="row" style="flex-wrap:wrap"><button class="btn ghost" data-act="eqKit" data-k="alpha">+ 2 AlphaPoint</button><button class="btn ghost" data-act="eqKit" data-k="delta">+ DeltaBurst</button><button class="btn ghost" data-act="eqKit" data-k="flags">+ Drapeaux</button></div>`;
+    if (!core.equipment.length) return h + `<div class="card empty"><h3>Aucun matériel</h3><p>Notez vos blasters, drapeaux et balises pour suivre leur état avant chaque événement.</p></div>`;
+    h += `<div class="grid2" style="grid-template-columns:repeat(4,minmax(0,1fr))">${Object.entries(EQ_STATUS).map(([k, s]) => `<div class="tile" style="text-align:center"><b style="color:${s.c}">${core.equipment.filter(e => e.status === k).length}</b><span>${s.n}</span></div>`).join("")}</div>`;
+    Object.entries(EQ_KINDS).forEach(([k, n]) => {
+      const g = core.equipment.filter(e => e.kind === k); if (!g.length) return;
+      h += `<div class="label">${n}</div><div class="card flush list">${g.map(e => `<button class="tap row" data-act="editEquip" data-id="${e.id}"><div class="grow"><b>${esc(e.name)}</b> ${e.tag ? `<span class="chip" style="color:var(--text)">${esc(e.tag)}</span>` : ""}${e.model ? `<div class="dim" style="font-size:12px">${esc(e.model)}</div>` : ""}</div><span style="color:${EQ_STATUS[e.status].c};font-weight:700;font-size:13px">${EQ_STATUS[e.status].n}</span></button>`).join("")}</div>`;
+    });
+    return h;
+  }
+};
+
+/* ---------- Fenêtres ---------- */
+let sheetLocked = false;
+function openSheet(html, locked = false){
+  const s = $("#sheet"); sheetLocked = locked;
+  s.innerHTML = `<div class="panel" role="dialog" aria-modal="true">${html}</div>`;
+  s.hidden = false;
+  const f = s.querySelector("input,select,textarea"); if (f) setTimeout(() => f.focus(), 50);
+}
+function closeSheet(){ $("#sheet").hidden = true; $("#sheet").innerHTML = ""; sheetLocked = false; }
+function confirmSheet(title, text, label, act, data = {}){
+  const attrs = Object.entries(data).map(([k, v]) => `data-${k}="${esc(v)}"`).join(" ");
+  openSheet(`<h3>${esc(title)}</h3><p class="muted">${esc(text)}</p><div class="stack" style="gap:8px;margin-top:12px"><button class="btn danger block" data-act="${act}" ${attrs}>${esc(label)}</button><button class="btn ghost block" data-act="closeSheet">Annuler</button></div>`);
+}
+function toast(msg){ const t = $("#toast"); t.textContent = msg; t.hidden = false; clearTimeout(toast.t); toast.t = setTimeout(() => t.hidden = true, 2600); }
+function haptic(strong){ if (!core.settings.haptics) return; try { navigator.vibrate && navigator.vibrate(strong ? [30, 40, 30] : 18); } catch (e) {} }
+
+function playerSheet(p){
+  form = {pid:p ? p.id : null, name:p ? p.name : "", callsign:p ? p.callsign : ""};
+  openSheet(`<h3>${p ? "Modifier le joueur" : "Nouveau joueur"}</h3><div class="stack" style="margin-top:10px">
+    <label class="field"><span>Nom</span><input class="input" id="pf-name" data-bind="form.name" value="${esc(form.name)}" autocapitalize="words"></label>
+    <label class="field"><span>Surnom / nom de code (optionnel)</span><input class="input" id="pf-call" data-bind="form.callsign" value="${esc(form.callsign)}"></label>
+    <div id="pf-err" class="note" style="color:var(--warn)"></div>
+    <button class="btn primary block" data-act="savePlayer">Enregistrer</button>${p ? "" : `<button class="btn ghost block" data-act="savePlayer" data-more="1">Enregistrer et ajouter un autre</button>`}<button class="btn ghost block" data-act="closeSheet">Annuler</button></div>`);
+}
+function equipSheet(e){
+  form = e ? {...e} : {id:null, name:"", kind:"blaster", model:"", tag:"", status:"ready", battery:"", notes:""};
+  const f = form;
+  openSheet(`<h3>${e ? "Matériel" : "Nouveau matériel"}</h3><div class="stack" style="margin-top:10px">
+    <label class="field"><span>Nom</span><input class="input" id="eq-name" data-bind="form.name" value="${esc(f.name)}" placeholder="Blaster 1"></label>
+    <label class="field"><span>Type</span><select class="input" id="eq-kind" data-bind="form.kind">${Object.entries(EQ_KINDS).map(([k, n]) => `<option value="${k}" ${f.kind === k ? "selected" : ""}>${n}</option>`).join("")}</select></label>
+    <label class="field"><span>Modèle</span><input class="input" id="eq-model" data-bind="form.model" value="${esc(f.model)}" placeholder="Nerf Laser Ops Pro AlphaPoint"></label>
+    <label class="field"><span>Identifiant / étiquette</span><input class="input" id="eq-tag" data-bind="form.tag" value="${esc(f.tag)}" placeholder="A1"></label>
+    <label class="field"><span>Statut</span><select class="input" id="eq-status" data-bind="form.status">${Object.entries(EQ_STATUS).map(([k, s]) => `<option value="${k}" ${f.status === k ? "selected" : ""}>${s.n}</option>`).join("")}</select></label>
+    <label class="field"><span>Piles / batterie</span><input class="input" id="eq-bat" data-bind="form.battery" value="${esc(f.battery)}" placeholder="4×AA changées le 08/11"></label>
+    <label class="field"><span>Notes</span><textarea class="input" id="eq-notes" rows="3" data-bind="form.notes">${esc(f.notes)}</textarea></label>
+    <button class="btn primary block" data-act="saveEquip">Enregistrer</button>${e ? `<button class="btn danger block" data-act="deleteEquip" data-id="${e.id}">Supprimer</button>` : ""}<button class="btn ghost block" data-act="closeSheet">Annuler</button></div>`);
+}
+function participantSheet(m, p){
+  const r = m.rules, act = isActive(m), step = r.healthMode === "lives" ? 1 : Math.max(1, r.dmg);
+  const opp = allP(m).filter(o => o.id !== p.id && !o.out && teamOf(m, o) !== teamOf(m, p));
+  openSheet(`<h3>${esc(pName(p))}</h3>
+    <div class="grid2" style="grid-template-columns:repeat(4,minmax(0,1fr));margin:10px 0">${tile("Points", p.points)}${tile("Touches", p.hits)}${tile("Élim.", p.elims)}${tile("Tombé", p.kos)}</div>
+    ${healthView(p, r, (teamOf(m, p)||{}).color, maxH(m, p))}
+    ${waiting(p) ? `<p class="note" style="color:var(--warn)">En attente de réapparition.</p>` : ""}
+    ${!act ? `<p class="note">${m.phase === "setup" ? "Démarrez la partie pour saisir des actions." : "La partie est terminée."}</p>` : ""}
+    ${bonusSection(m, p, opp)}
+    ${!p.out && !waiting(p) && act ? `<div class="label" style="margin-top:14px">Touché par…<small>tireur +${r.pph} pt, +${r.ppe} s'il élimine</small></div><div class="card flush list" style="margin-top:6px">
+      ${opp.map(o => `<button class="tap row" data-act="hitBy" data-p="${p.id}" data-s="${o.id}">${dot((teamOf(m, o)||{}).color)}<b class="grow">${esc(pName(o))}</b><span style="color:var(--accent);font-size:13px">+${r.pph} pt</span></button>`).join("")}
+      <button class="tap row" data-act="hitBy" data-p="${p.id}" data-s=""><b class="grow" style="color:var(--danger)">Touché (tireur inconnu)</b></button></div>` : ""}
+    ${act ? `<div class="label" style="margin-top:14px">Corriger une erreur</div><div class="card stack" style="margin-top:6px">
+      <div class="stepper"><span>Points</span><div class="ctl"><button data-act="pAdj" data-p="${p.id}" data-what="points" data-d="-1" aria-label="Moins">−</button><output>${p.points}</output><button data-act="pAdj" data-p="${p.id}" data-what="points" data-d="1" aria-label="Plus">+</button></div></div>
+      <div class="stepper"><span>${r.healthMode === "lives" ? "Vies" : "Points de vie"}</span><div class="ctl"><button data-act="pAdj" data-p="${p.id}" data-what="health" data-d="${-step}" aria-label="Moins">−</button><output>${p.health}</output><button data-act="pAdj" data-p="${p.id}" data-what="health" data-d="${step}" aria-label="Plus">+</button></div></div>
+      <p class="note" style="margin:0">Chaque correction va dans le journal et peut être annulée.</p></div>
+      <div style="margin-top:12px">${p.out ? `<button class="btn ghost block" data-act="pRevive" data-p="${p.id}">Remettre en jeu</button>` : `<button class="btn danger block" data-act="pElim" data-p="${p.id}">Éliminer</button>`}</div>` : ""}
+    <button class="btn ghost block" style="margin-top:10px" data-act="closeSheet">OK</button>`);
+}
+
+function bonusSection(m, p, opp){
+  if (!m.rules.powerups || !isActive(m)) return "";
+  if (p.puUsed) return `<p class="note" style="margin-top:14px">⚡ Bonus déjà utilisé pendant cette partie.</p>`;
+  if (p.out || waiting(p)) return "";
+  const allies = MODES[m.mode].ffa ? [] : (teamOf(m, p) || {participants:[]}).participants.filter(a => a.id !== p.id && !a.out && !waiting(a) && a.health < maxH(m, a));
+  const amt = m.rules.healthMode === "lives" ? "+2 vies" : "+50 PV";
+  return `<div class="label" style="margin-top:14px;color:var(--gold)">⚡ Bonus<small>1 seul par partie</small></div><div class="card flush list" style="margin-top:6px">
+    ${opp.map(o => `<button class="tap row" data-act="puShot" data-p="${p.id}" data-v="${o.id}">${dot((teamOf(m, o)||{}).color)}<span class="grow">Tir puissant sur <b>${esc(pName(o))}</b></span><span class="dim" style="font-size:12px">dégâts ×2</span></button>`).join("")}
+    <button class="tap row" data-act="puHeal" data-p="${p.id}" data-t="${p.id}" ${p.health >= maxH(m, p) ? "disabled" : ""}><span class="grow">Trousse de soin</span><span class="dim" style="font-size:12px">${amt}</span></button>
+    ${allies.map(a => `<button class="tap row" data-act="puHeal" data-p="${p.id}" data-t="${a.id}"><span class="grow">Soigner <b>${esc(pName(a))}</b></span><span class="dim" style="font-size:12px">${amt}</span></button>`).join("")}</div>`;
+}
+
+/* ---------- Actions ---------- */
+function setPath(rootName, path, val){
+  const roots = {draft, settings:core.settings, mr, form, "draft.rules":draft && draft.rules, "mr.rules":mr && mr.rules};
+  let obj = roots[rootName]; const parts = path.split(".");
+  while (parts.length > 1) obj = obj[parts.shift()];
+  obj[parts[0]] = val;
+  afterSet(rootName);
+}
+function getPath(rootName, path){
+  const roots = {draft, settings:core.settings, mr, form, "draft.rules":draft && draft.rules, "mr.rules":mr && mr.rules};
+  return path.split(".").reduce((o, k) => o[k], roots[rootName]);
+}
+function afterSet(rootName){
+  if (rootName === "settings") touchCore();
+  if (rootName === "mr.rules" || rootName === "mr") saveModeRules();
+}
+function saveModeRules(){
+  const k = mr.mode, gen = generatedRules(k);
+  clampRules(mr.rules);
+  if (JSON.stringify(mr.rules) === JSON.stringify(gen)) delete core.modeRules[k]; else core.modeRules[k] = clone(mr.rules);
+  touchCore();
+}
+function getMatch(){ return matches[live.id]; }
+function openLive(id){
+  live.id = id; live.proposal = null; live.overtime = false; live.dismissed = null;
+  const m = matches[id]; const lim = m && limitOf(m);
+  if (m && lim && elapsed(m) >= lim && isActive(m)) live.overtime = true;
+  stack.push({v:"live", id}); render(); window.scrollTo(0, 0); wakeLock(true);
+}
+function closeLive(){
+  closeSheet(); cancelCountdown();
+  live.id = null; live.proposal = null;
+  if (cur().v === "live") stack.pop();
+  if (!stack.length) stack = [{v:tab}];
+  wakeLock(false); render(); window.scrollTo(0, 0);
+}
+async function wakeLock(on){
+  try {
+    if (on && core.settings.keepAwake && navigator.wakeLock) live.wake = await navigator.wakeLock.request("screen");
+    else if (!on && live.wake) { await live.wake.release(); live.wake = null; }
+  } catch (e) {}
+}
+function startCountdown(m){
+  const n = m.rules.countdown;
+  if (!n) { startMatch(m); haptic(true); return; }
+  let v = n; const box = $("#countdown");
+  const draw = () => { box.innerHTML = `<div class="muted" style="font-family:var(--f-display);letter-spacing:.3em;font-weight:700">PRÊTS ?</div><b>${v}</b><button class="btn ghost" data-act="cancelCountdown">Annuler</button>`; };
+  box.hidden = false; draw(); haptic();
+  live.cdTimer = setInterval(() => {
+    v--;
+    if (v <= 0) { cancelCountdown(); startMatch(m); haptic(true); return; }
+    draw(); haptic();
+  }, 1000);
+}
+function cancelCountdown(){ clearInterval(live.cdTimer); live.cdTimer = null; $("#countdown").hidden = true; }
+
+function loadDemo(){
+  const names = ["Alex","Bastien","Chloé","Dylan","Emma","Félix","Gabriel","Hugo"];
+  const ps = names.map(n => ({id:uid(), name:n, callsign:"", createdAt:Date.now()}));
+  core.players.push(...ps);
+  core.teams.push({id:uid(), name:"Rouge", color:"red", playerIds:ps.slice(0,4).map(p => p.id)}, {id:uid(), name:"Bleu", color:"blue", playerIds:ps.slice(4).map(p => p.id)});
+  core.equipment.push({id:uid(), name:"AlphaPoint A1", kind:"blaster", model:"Nerf Laser Ops Pro AlphaPoint", tag:"A1", status:"ready", battery:"", notes:""},
+    {id:uid(), name:"AlphaPoint A2", kind:"blaster", model:"Nerf Laser Ops Pro AlphaPoint", tag:"A2", status:"charging", battery:"", notes:""},
+    {id:uid(), name:"DeltaBurst D1", kind:"blaster", model:"Nerf Laser Ops Pro DeltaBurst", tag:"D1", status:"ready", battery:"", notes:""},
+    {id:uid(), name:"Drapeau rouge", kind:"flag", model:"", tag:"", status:"ready", battery:"", notes:""});
+  ["tdm","elim","ctf","lms","dom"].forEach((mode, i) => {
+    const r = baseRules(mode);
+    const teams = MODES[mode].ffa ? [...ps].sort(() => Math.random() - .5).slice(0, 6).map((p, j) => ({name:p.name, color:colorAt(j), players:[p]}))
+      : split(ps, 2, "random").map((g, j) => ({name: j ? "Bleu" : "Rouge", color: colorAt(j), players:g}));
+    const date = Date.now() - (5 - i) * 3 * 86400000;
+    const m = createMatch({name:"Exemple – " + MODES[mode].title, date, mode, rules:r, teams});
+    const dur = Math.max(1, r.duration) * 60 * (0.6 + Math.random() * .4);
+    allP(m).forEach(p => { p.hits = 2 + Math.floor(Math.random() * 11); p.elims = Math.floor(Math.random() * 4); p.kos = r.respawn ? Math.floor(Math.random() * 4) : 0; p.points = p.hits * r.pph + p.elims * r.ppe; });
+    if (!r.respawn) { const surv = m.teams[Math.floor(Math.random() * m.teams.length)]; m.teams.forEach(t => t.participants.forEach((p, j) => { const out = t !== surv || j > 0; p.out = out; p.kos = out ? 1 : 0; p.health = out ? 0 : 1 + Math.floor(Math.random() * r.start); p.outAt = out ? 30 + Math.random() * (dur - 30) : null; })); }
+    m.teams.forEach(t => { if (mode === "ctf") { t.captures = Math.floor(Math.random() * 4); t.objective = t.captures * r.ppc; } if (mode === "dom") t.objective = 20 + Math.floor(Math.random() * 60); });
+    m.startedAt = date; m.acc = dur; m.phase = "finished"; m.endedAt = date + dur * 1000;
+    const w = winnerOf(m); m.winnerTeamId = w ? w.id : null;
+    m.winnerSummary = w ? (MODES[mode].ffa ? `${w.name} remporte la partie` : `Victoire de l'équipe ${w.name}`) : "Égalité";
+    m.endReason = "Partie d'exemple"; touchMatch(m);
+  });
+  touchCore(); toast("Exemple chargé : 8 joueurs, 2 équipes, 5 parties."); render();
+}
+
+const ACT = {
+  tab: d => setTab(d.k), back, closeSheet, cancelCountdown,
+  seg: d => { ui[d.k] = d.v; render(); },
+  step: d => {
+    const v = getPath(d.root, d.path);
+    if (d.path === "nslots" && d.root === "draft") {
+      const n = clamp(draft.slots.length + Number(d.d), 2, 4);
+      while (draft.slots.length < n) { const c = COLOR_ORDER.find(k => k !== "purple" && !draft.slots.some(s => s.color === k)) || "green"; draft.slots.push({name:COLORS[c].name, color:c}); }
+      draft.slots.length = n; syncAssign(); render(); return;
+    }
+    setPath(d.root, d.path, clamp(v + Number(d.d), Number(d.min), Number(d.max))); render();
+  },
+  toggle: d => { setPath(d.root, d.path, !getPath(d.root, d.path)); render(); },
+  healthMode: d => { const r = getPath(d.root.split(".")[0], "rules"); if (r.healthMode === d.v) return; r.healthMode = d.v; r.start = d.v === "lives" ? core.settings.lives : core.settings.hp; clampRules(r); afterSet(d.root); render(); },
+  addPlayer: () => playerSheet(null),
+  editPlayer: d => playerSheet(core.players.find(p => p.id === d.id)),
+  savePlayer: d => {
+    const name = form.name.trim();
+    if (!name) { $("#pf-err").textContent = "Indiquez un nom."; return; }
+    if (core.players.some(p => p.id !== form.pid && p.name.toLowerCase() === name.toLowerCase())) { $("#pf-err").textContent = "Un joueur porte déjà ce nom. Ajoutez une initiale."; return; }
+    if (form.pid) { const p = core.players.find(x => x.id === form.pid); p.name = name; p.callsign = form.callsign.trim(); }
+    else core.players.push({id:uid(), name, callsign:form.callsign.trim(), createdAt:Date.now()});
+    touchCore(); render();
+    if (d.more) { playerSheet(null); toast(name + " ajouté"); } else closeSheet();
+  },
+  openPlayer: d => go("player", {id:d.id}),
+  askDeletePlayer: d => confirmSheet("Supprimer ce joueur ?", "Son nom reste visible dans les anciennes parties, mais ses statistiques personnelles sont perdues.", "Supprimer", "deletePlayer", {id:d.id}),
+  deletePlayer: d => { core.players = core.players.filter(p => p.id !== d.id); core.teams.forEach(t => t.playerIds = t.playerIds.filter(i => i !== d.id)); touchCore(); closeSheet(); back(); },
+  newTeam: () => { form = {name:"Équipe Rouge", color:"red", ids:[]}; go("team", {id:null}); },
+  openTeam: d => { const t = core.teams.find(x => x.id === d.id); form = {name:t.name, color:t.color, ids:[...t.playerIds]}; go("team", {id:d.id}); },
+  teamColor: d => { if (form.name === "Équipe " + COLORS[form.color].name) form.name = "Équipe " + COLORS[d.k].name; form.color = d.k; render(); },
+  teamToggle: d => { form.ids = form.ids.includes(d.id) ? form.ids.filter(i => i !== d.id) : [...form.ids, d.id]; render(); },
+  saveTeam: () => {
+    const name = form.name.trim(); if (!name) { toast("Donnez un nom à l'équipe."); return; }
+    const id = cur().id;
+    if (id) Object.assign(core.teams.find(t => t.id === id), {name, color:form.color, playerIds:[...form.ids]});
+    else core.teams.push({id:uid(), name, color:form.color, playerIds:[...form.ids]});
+    touchCore(); ui.roster = "teams"; back(); toast("Équipe enregistrée");
+  },
+  deleteTeam: d => confirmSheet("Supprimer l'équipe ?", "Les joueurs et les résultats déjà joués sont conservés.", "Supprimer", "deleteTeamOk", {id:d.id}),
+  deleteTeamOk: d => { core.teams = core.teams.filter(t => t.id !== d.id); touchCore(); closeSheet(); back(); },
+  autoSplit: () => { form = {n:2, strategy:"balanced", ids:core.players.map(p => p.id), groups:null}; go("autosplit"); },
+  splitToggle: d => { form.ids = form.ids.includes(d.id) ? form.ids.filter(i => i !== d.id) : [...form.ids, d.id]; render(); },
+  splitStrat: d => { form.strategy = d.v; render(); },
+  doSplit: () => { form.groups = split(core.players.filter(p => form.ids.includes(p.id)), form.n, form.strategy).map(g => g.map(p => p.id)); render(); },
+  saveSplit: () => {
+    form.groups.forEach((g, i) => { const c = colorAt(i), name = "Équipe " + COLORS[c].name, ex = core.teams.find(t => t.name === name);
+      if (ex) { ex.playerIds = [...g]; ex.color = c; } else core.teams.push({id:uid(), name, color:c, playerIds:[...g]}); });
+    touchCore(); ui.roster = "teams"; back(); toast("Équipes enregistrées");
+  },
+  newGame: () => {
+    const now = new Date(), pad = n => String(n).padStart(2, "0");
+    draft = {name:"Partie du " + now.toLocaleDateString("fr-BE", {day:"numeric", month:"short"}) + " " + pad(now.getHours()) + "h" + pad(now.getMinutes()),
+      dateStr:`${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`,
+      mode:"tdm", rules:rulesFor("tdm"), ids:[], bonus:{}, slots:[{name:"Rouge", color:"red"}, {name:"Bleu", color:"blue"}], assign:{}};
+    go("newgame");
+  },
+  pickMode: d => { draft.mode = d.k; draft.rules = rulesFor(d.k); render(); },
+  ngToggle: d => { draft.ids = draft.ids.includes(d.id) ? draft.ids.filter(i => i !== d.id) : [...draft.ids, d.id]; syncAssign(); render(); },
+  ngAll: () => { draft.ids = draft.ids.length === core.players.length ? [] : core.players.map(p => p.id); syncAssign(); render(); },
+  ngSplit: d => { const groups = split(core.players.filter(p => draft.ids.includes(p.id)), draft.slots.length, d.v); draft.assign = {}; groups.forEach((g, i) => g.forEach(p => draft.assign[p.id] = i)); render(); },
+  createGame: d => {
+    if (ngValidation()) return;
+    const sel = core.players.filter(p => draft.ids.includes(p.id));
+    const teams = MODES[draft.mode].ffa ? sel.map((p, i) => ({name:p.name, color:colorAt(i), players:[p]}))
+      : draft.slots.map((s, i) => ({name:s.name.trim() || COLORS[s.color].name, color:s.color, players:sel.filter(p => draft.assign[p.id] === i)}));
+    const date = new Date(draft.dateStr).getTime() || Date.now();
+    const m = createMatch({name:draft.name.trim(), date, mode:draft.mode, rules:draft.rules, teams, bonus:draft.bonus});
+    stack.pop(); draft = null;
+    if (d.launch) openLive(m.id); else { toast("Partie enregistrée"); render(); }
+  },
+  openMatch: d => { const m = matches[d.id]; if (!m) return; if (m.phase === "finished") go("result", {id:d.id}); else openLive(d.id); },
+  closeLive,
+  mainLive: () => { const m = getMatch(); if (!m) return; if (m.phase === "setup") startCountdown(m); else togglePause(m); },
+  hit: d => { const m = getMatch(); registerHit(m, findP(m, d.p), null); },
+  puShot: d => { const m = getMatch(); registerHit(m, findP(m, d.v), findP(m, d.p), {mult:2, pu:true}); if (!live.proposal) closeSheet(); },
+  puHeal: d => { const m = getMatch(); healBonus(m, findP(m, d.p), findP(m, d.t)); if (!live.proposal) closeSheet(); },
+  plus: d => { const m = getMatch(); successHit(m, findP(m, d.p)); },
+  pActions: d => { const m = getMatch(); participantSheet(m, findP(m, d.p)); },
+  hitBy: d => { const m = getMatch(); registerHit(m, findP(m, d.p), d.s ? findP(m, d.s) : null); if (!live.proposal) closeSheet(); },
+  pAdj: d => { const m = getMatch(), p = findP(m, d.p); d.what === "points" ? adjustPoints(m, p, Number(d.d)) : adjustHealth(m, p, Number(d.d)); if (!live.proposal) participantSheet(m, p); },
+  pElim: d => { const m = getMatch(); eliminate(m, findP(m, d.p)); if (!live.proposal) closeSheet(); },
+  pRevive: d => { const m = getMatch(); revive(m, findP(m, d.p)); closeSheet(); },
+  cap: d => { const m = getMatch(); adjustCaptures(m, findT(m, d.t), Number(d.d)); },
+  zone: d => { const m = getMatch(); setZone(m, Number(d.i), d.t); },
+  undo: () => { const m = getMatch(); if (m) undoLast(m); },
+  btAdd: () => btAdd(),
+  btRe: d => { const b = bt.list.get(d.id); if (b) btConnect(b); },
+  noop: () => toast("Patientez une seconde : le blaster envoie son identité."),
+  editBlaster: d => { form = null; blasterSheet(d.k); },
+  blPreset: d => { const pr = core.blasters[d.k]; if (!pr) return; pr.upg = {...PRESETS[d.v].upg}; touchCore(); blasterSheet(d.k); },
+  upgMode: d => { const r = getPath(d.root.split(".")[0], "rules"); r.upgMode = d.v; if (!r.upgAll) r.upgAll = ZERO_UPG(); afterSet(d.root); render(); },
+  upgPreset: d => { const r = getPath(d.root.split(".")[0], "rules"); r.upgAll = {...PRESETS[d.v].upg}; afterSet(d.root); render(); },
+  upg: d => {
+    const pr = core.blasters[d.k], u = d.u, delta = Number(d.d);
+    if (!pr) return;
+    const nv = (pr.upg[u] || 0) + delta; if (nv < UPG_MIN || nv > UPG_MAX) return;
+    pr.upg[u] = nv; touchCore(); blasterSheet(d.k);
+  },
+  saveBlaster: d => { const pr = core.blasters[d.k]; if (pr) { pr.name = (form.name || "").trim().slice(0, 24); touchCore(); } closeSheet(); render(); toast("Blaster enregistré"); },
+  forgetBlaster: d => confirmSheet("Oublier ce blaster ?", "Son nom, son expérience et ses améliorations seront effacés. Il redeviendra « sans nom » à la prochaine connexion.", "Oublier", "forgetBlasterOk", {k:d.k}),
+  forgetBlasterOk: d => { delete core.blasters[d.k]; touchCore(); closeSheet(); render(); },
+  btBlink: d => { const b = bt.list.get(d.id); if (b) btSend(b, [0x50, 1, 3]); },
+  btAuto: () => { const m = getMatch(), conn = btConnected(); allP(m).forEach((p, i) => { p.blasterId = conn[i] ? conn[i].id : null; }); touchMatch(m); render(); },
+  askEnd: () => openSheet(`<h3>Terminer la partie ?</h3><p class="muted">Le gagnant est calculé selon les règles du mode. Les résultats sont enregistrés.</p><div class="stack" style="gap:8px;margin-top:12px"><button class="btn danger block" data-act="endOk">Terminer et voir les résultats</button><button class="btn ghost block" data-act="closeSheet">Continuer la partie</button></div>`),
+  endOk: () => { closeSheet(); finishMatch(getMatch(), "Terminée par l'organisateur"); window.scrollTo(0, 0); },
+  propEnd: () => { const m = getMatch(), r = live.proposal ? live.proposal.reason : "Fin de partie"; closeSheet(); finishMatch(m, r); window.scrollTo(0, 0); },
+  propContinue: () => { const p = live.proposal; if (p) { if (p.timeUp) live.overtime = true; else live.dismissed = p.reason; } live.proposal = null; closeSheet(); render(); },
+  copyResult: async d => {
+    const m = matches[d.id];
+    const lines = [`${m.name} — ${MODES[m.mode].title}`, m.winnerSummary, ...(MODES[m.mode].ffa ? [] : rankedTeams(m).map(t => `• ${t.name} : ${score(t)} pts`)), "Classement :",
+      ...rankedPlayers(m).slice(0, 5).map((p, i) => `${i+1}. ${pName(p)} — ${p.points} pts`), `Durée : ${clock(m.acc)} · Laser Arena`];
+    const txt = lines.join("\n");
+    try { await navigator.clipboard.writeText(txt); toast("Résumé copié"); }
+    catch (e) { openSheet(`<h3>Résumé</h3><textarea class="input" rows="10" id="copy-area" readonly>${esc(txt)}</textarea><button class="btn ghost block" style="margin-top:10px" data-act="closeSheet">Fermer</button>`); setTimeout(() => { const a = $("#copy-area"); a && a.select(); }, 60); }
+  },
+  askDeleteMatch: d => confirmSheet("Supprimer cette partie ?", "Scores et journal seront supprimés. Les statistiques seront recalculées.", "Supprimer", "deleteMatch", {id:d.id}),
+  deleteMatch: d => { removeMatch(d.id); saveLocal(); closeSheet(); back(); },
+  openModeRules: d => { mr = {mode:d.k, rules:rulesFor(d.k)}; go("moderules", {k:d.k}); },
+  resetMode: d => { delete core.modeRules[d.k]; mr.rules = generatedRules(d.k); touchCore(); render(); toast("Règles d'origine rétablies"); },
+  openEquipment: () => go("equipment"),
+  editEquip: d => equipSheet(d.id ? core.equipment.find(e => e.id === d.id) : null),
+  saveEquip: () => {
+    if (!form.name.trim()) { toast("Indiquez un nom."); return; }
+    const e = {...form, name:form.name.trim(), updatedAt:Date.now()};
+    if (form.id) Object.assign(core.equipment.find(x => x.id === form.id), e); else core.equipment.push({...e, id:uid()});
+    touchCore(); closeSheet(); render();
+  },
+  deleteEquip: d => { core.equipment = core.equipment.filter(e => e.id !== d.id); touchCore(); closeSheet(); render(); },
+  eqKit: d => {
+    const tag = p => { let n = 1; while (core.equipment.some(e => e.tag === p + n)) n++; return p + n; };
+    if (d.k === "alpha") for (let i = 0; i < 2; i++) { const t = tag("A"); core.equipment.push({id:uid(), name:"AlphaPoint " + t, kind:"blaster", model:"Nerf Laser Ops Pro AlphaPoint", tag:t, status:"ready", battery:"", notes:""}); }
+    if (d.k === "delta") { const t = tag("D"); core.equipment.push({id:uid(), name:"DeltaBurst " + t, kind:"blaster", model:"Nerf Laser Ops Pro DeltaBurst", tag:t, status:"ready", battery:"", notes:""}); }
+    if (d.k === "flags") core.equipment.push({id:uid(), name:"Drapeau rouge", kind:"flag", model:"", tag:"", status:"ready", battery:"", notes:""}, {id:uid(), name:"Drapeau bleu", kind:"flag", model:"", tag:"", status:"ready", battery:"", notes:""});
+    touchCore(); render();
+  },
+  demo: () => loadDemo(),
+  export: async () => {
+    const json = JSON.stringify({app:"Laser Arena", exportedAt:new Date().toISOString(), core, matches}, null, 2);
+    let dl = null; try { dl = window.claude && await window.claude.use("downloads"); } catch (e) {}
+    if (dl) { try { await dl.save({filename:"laser-arena-sauvegarde.json", data:new Blob([json], {type:"application/json"})}); return; } catch (e) { if (e && e.code === "declined") return; } }
+    openSheet(`<h3>Sauvegarde</h3><p class="muted">Copiez ce texte dans un fichier pour le garder.</p><textarea class="input" rows="10" id="copy-area" readonly>${esc(json)}</textarea><button class="btn ghost block" style="margin-top:10px" data-act="closeSheet">Fermer</button>`);
+  },
+  askDeleteHistory: () => confirmSheet("Supprimer toutes les parties ?", "Joueurs et équipes sont conservés. Les statistiques repartent de zéro.", "Supprimer les parties", "deleteHistory"),
+  deleteHistory: () => { Object.keys(matches).forEach(removeMatch); saveLocal(); closeSheet(); render(); toast("Historique supprimé"); },
+  askDeleteAll: () => confirmSheet("Tout effacer ?", "Joueurs, équipes, parties, matériel et règles personnalisées seront supprimés. Exportez une sauvegarde avant.", "Tout effacer", "deleteAll"),
+  deleteAll: () => {
+    Object.keys(matches).forEach(removeMatch);
+    core = {players:[], teams:[], equipment:[], blasters:{}, settings:{...DEFAULT_SETTINGS}, modeRules:{}, updatedAt:0};
+    touchCore(); closeSheet(); setTab("home"); toast("Toutes les données ont été effacées");
+  }
+};
+const CHANGE = {
+  filter: el => { ui.gameFilter = el.value; render(); },
+  chartPlayer: el => { ui.chartPlayer = el.value; render(); },
+  slotColor: el => { const s = draft.slots[Number(el.dataset.i)]; if (s.name === COLORS[s.color].name) s.name = COLORS[el.value].name; s.color = el.value; render(); },
+  liveUpgMode: el => { const m = getMatch(); m.rules.upgMode = el.value; if (!m.rules.upgAll) m.rules.upgAll = ZERO_UPG(); touchMatch(m); render(); },
+  btLink: el => { const m = getMatch(), p = findP(m, el.dataset.p);
+    allP(m).forEach(o => { if (o !== p && el.value && o.blasterId === el.value) o.blasterId = null; }); // un blaster = un joueur
+    p.blasterId = el.value || null; touchMatch(m); render();
+    const b = bt.list.get(el.value); if (b) btSend(b, [0x50, 1, 2]); },
+  ngBonus: el => { draft.bonus[el.dataset.id] = Number(el.value); },
+  ngMove: el => { draft.assign[el.dataset.id] = Number(el.value); render(); },
+  ngPreset: el => { if (!el.value) return; const [i, tid] = el.value.split(":"); const t = core.teams.find(x => x.id === tid), idx = Number(i);
+    draft.slots[idx] = {name:t.name, color:t.color}; t.playerIds.forEach(pid => { if (!draft.ids.includes(pid)) draft.ids.push(pid); draft.assign[pid] = idx; }); syncAssign(); render(); },
+  splitMove: el => { const from = Number(el.dataset.from), to = Number(el.value), id = el.dataset.id; form.groups[from] = form.groups[from].filter(x => x !== id); form.groups[to].push(id); render(); },
+  import: el => {
+    const f = el.files && el.files[0]; if (!f) return;
+    const rd = new FileReader();
+    rd.onload = () => {
+      try {
+        const d = JSON.parse(rd.result);
+        if (!d.core || !d.matches) throw new Error();
+        core = {...core, ...d.core, settings:{...DEFAULT_SETTINGS, ...(d.core.settings||{})}};
+        matches = d.matches; Object.values(matches).forEach(m => { m.updatedAt = Date.now(); queueWrite("match:" + m.id); });
+        touchCore(); setTab("home"); toast("Sauvegarde importée");
+      } catch (e) { toast("Ce fichier n'est pas une sauvegarde Laser Arena."); }
+    };
+    rd.readAsText(f);
+  }
+};
+
+document.addEventListener("click", e => {
+  const el = e.target.closest("[data-act]");
+  if (!el) { if (e.target.id === "sheet" && !sheetLocked) closeSheet(); return; }
+  if (el.disabled) return;
+  const fn = ACT[el.dataset.act];
+  if (fn) { e.preventDefault(); fn(el.dataset, el); }
+});
+document.addEventListener("change", e => {
+  const el = e.target;
+  if (el.dataset.actChange && CHANGE[el.dataset.actChange]) { CHANGE[el.dataset.actChange](el); return; }
+  if (el.dataset.bind && el.tagName === "SELECT") bindSet(el);
+});
+document.addEventListener("input", e => { if (e.target.dataset.bind) bindSet(e.target); });
+function bindSet(el){
+  const [root, ...rest] = el.dataset.bind.split(".");
+  setPath(root, rest.join("."), el.value);
+  if (root === "draft") { // met à jour le message de validation sans perdre le focus
+    const msg = ngValidation(); document.querySelectorAll('[data-act="createGame"]').forEach(b => b.disabled = !!msg);
+  }
+}
+document.addEventListener("keydown", e => { if (e.key === "Escape" && !$("#sheet").hidden && !sheetLocked) closeSheet(); });
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible" && live.id) wakeLock(true); });
+
+/* ---------- Horloge ---------- */
+let lastHb = 0;
+setInterval(() => {
+  const m = live.id && matches[live.id];
+  if (!m || cur().v !== "live") return;
+  const now = Date.now();
+  if (m.phase === "playing") {
+    if (now - lastHb > 5000) { lastHb = now; try { localStorage.setItem(LS + ".hb." + m.id, String(now)); } catch (e) {} }
+    const e = elapsed(m, now);
+    const changed = awardTicks(m, e);
+    const back = allP(m).filter(p => waiting(p) && e >= p.waitUntil);
+    if (back.length) {
+      back.forEach(p => { p.waitUntil = null; p.health = maxH(m, p); addLog(m, "respawn", `${pName(p)} réapparaît`); });
+      haptic(); touchMatch(m); render(); return;
+    }
+    const lim = limitOf(m);
+    if (lim && e >= lim && !live.overtime && !live.proposal) {
+      freeze(m, lim); addLog(m, "pause", "Temps écoulé"); touchMatch(m);
+      live.proposal = {title:"Temps écoulé", reason:"Temps écoulé", timeUp:true}; haptic(true); render(); return;
+    }
+    if (changed || live.proposal) { render(); return; }
+  }
+  updateClock();
+}, 250);
+
+/* Partie interrompue (onglet fermé longtemps) : remise en pause au dernier signe de vie. */
+function recover(){
+  Object.values(matches).forEach(m => {
+    if (m.phase !== "playing") return;
+    let hb = null; try { hb = Number(localStorage.getItem(LS + ".hb." + m.id)); } catch (e) {}
+    if (hb && Date.now() - hb > 90000) { m.acc = elapsed(m, hb); m.resumedAt = null; m.phase = "paused"; addLog(m, "pause", "Pause automatique (page rouverte)"); touchMatch(m); }
+  });
+}
+
+/* ---------- Blasters Bluetooth (Nerf Laser Ops Pro) ----------
+   Protocole confirmé sur de vrais blasters le 11/11/2026 :
+   le blaster envoie « touché » avec le n° du tireur ; l'app attribue un n° à chaque blaster. */
+const BT_SERVICE = "073e1435-85d1-455c-97cd-0b8262f20eac";
+const BT_NOTIFY  = "073e1382-85d1-455c-97cd-0b8262f20eac";
+const BT_WRITE   = "073e1383-85d1-455c-97cd-0b8262f20eac";
+const bt = {list:new Map(), supported: !!(navigator.bluetooth && navigator.bluetooth.requestDevice), seq:0};
+const btHex = a => [...a].map(x => x.toString(16).padStart(2, "0")).join(" ");
+const btConnected = () => [...bt.list.values()].filter(b => b.write);
+const btOf = p => p && p.blasterId ? bt.list.get(p.blasterId) : null;
+
+async function btAdd(){
+  if (!bt.supported) { toast("Bluetooth indisponible : Chrome sur Android ou Mac, ou Bluefy sur iPhone."); return; }
+  let device;
+  try { device = await navigator.bluetooth.requestDevice({filters:[{services:[BT_SERVICE]}]}); }
+  catch (e) {
+    if (!/cancel/i.test(e.message)) toast(/permission|policy|allowed|disallowed/i.test(e.message) ? "Le Bluetooth est bloqué dans cette page. Ouvrez Laser Arena directement dans le navigateur." : "Bluetooth : " + e.message);
+    return;
+  }
+  let b = bt.list.get(device.id);
+  if (!b) {
+    bt.seq++;
+    b = {id:device.id, device, label:"B" + bt.seq, write:null, notify:null, chain:Promise.resolve(), team:null, pid:null, hp:null, ammo:null, bat:null, dmg:2, retries:0};
+    bt.list.set(device.id, b);
+    device.addEventListener("gattserverdisconnected", () => btLost(b));
+  }
+  await btConnect(b);
+}
+async function btConnect(b){
+  try {
+    const server = await b.device.gatt.connect();
+    const svc = await server.getPrimaryService(BT_SERVICE);
+    const n = await svc.getCharacteristic(BT_NOTIFY);
+    b.write = await svc.getCharacteristic(BT_WRITE);
+    if (!b.notify) { n.addEventListener("characteristicvaluechanged", e => btDecode(b, new Uint8Array(e.target.value.buffer))); b.notify = n; }
+    await n.startNotifications();
+    b.retries = 0;
+    setTimeout(() => toast(`${bName(b)} connecté`), 400); // le nom arrive avec la réponse 0x35
+    [0x35, 0x33, 0x38, 0x51].forEach(c => btSend(b, [c]));
+    btRefresh();
+  } catch (e) { b.write = null; toast(`Blaster ${b.label} : connexion impossible (${e.message})`); btRefresh(); }
+}
+/* Perte de connexion : 3 tentatives automatiques si une partie est ouverte. */
+function btLost(b){
+  b.write = null; btRefresh();
+  const m = live.id && matches[live.id];
+  if (m && isActive(m) && allP(m).some(p => p.blasterId === b.id) && b.retries < 3) {
+    b.retries++; toast(`Blaster ${b.label} déconnecté, reconnexion…`);
+    setTimeout(() => btConnect(b), 1500);
+  }
+}
+/* Envoi en file : une commande à la fois, espacées de 0,12 s (comme l'app officielle). */
+function btSend(b, bytes){
+  b.chain = b.chain.then(async () => {
+    if (!b.write) return;
+    const data = new Uint8Array(bytes);
+    try { if (b.write.writeValueWithoutResponse) await b.write.writeValueWithoutResponse(data); else await b.write.writeValue(data); } catch (e) {}
+    await new Promise(r => setTimeout(r, 120));
+  });
+  return b.chain;
+}
+function btDecode(b, d){
+  switch (d[0]) {
+    case 0x30: btHit(b, d); break;                    // touché : équipe tireur, n° tireur, dégâts, santé
+    case 0x32: b.ammo = d[2]; btShot(b); break;      // tir pendant la partie
+    case 0x31: case 0x3a: b.ammo = d[1]; break;
+    case 0x33: b.team = d[1]; break;
+    case 0x35: b.dmg = d[3] || 2; b.ammoMax = d[2]; b.cooldown = d[12]; btIdentify(b, d[9], d[10]); break;
+    case 0x38: b.hp = d[1]; break;
+    case 0x3f: btBack(b); break;                      // retour en jeu après le délai du blaster
+    case 0x51: b.bat = (d[1] << 8) | d[2]; break;    // centièmes de volt
+    default: return;                                  // 0x49 (détente) et autres : ignorés
+  }
+  btRefresh(true);
+}
+let btRenderTimer = null;
+function btRefresh(light){
+  const v = cur().v;
+  if (v !== "live" && v !== "equipment") return;
+  if (isEditing() || !$("#sheet").hidden) return;
+  clearTimeout(btRenderTimer); btRenderTimer = setTimeout(render, light ? 150 : 0);
+}
+/* Une touche signalée par le blaster devient une touche dans l'app (avec le tireur). */
+function btHit(b, d){
+  const m = live.id && matches[live.id];
+  if (!m) return;
+  const victim = allP(m).find(p => p.blasterId === b.id);
+  if (!victim) return;
+  const shooter = allP(m).find(p => p.pid === d[2] && p.blasterId) || null;
+  if (m.phase !== "playing") { addLog(m, "hit", `Touche ignorée (partie ${m.phase === "paused" ? "en pause" : "pas démarrée"}) : ${pName(victim)}`); touchMatch(m); return; }
+  if (shooter && teamOf(m, shooter) === teamOf(m, victim) && !MODES[m.mode].ffa) return; // tir allié : ignoré
+  if (shooter && (shooter.out || waiting(shooter))) { addLog(m, "hit", `Touche ignorée : ${pName(shooter)} est hors jeu`); touchMatch(m); return; }
+  registerHit(m, victim, shooter, {bt:true});
+}
+function btShot(b){
+  const m = live.id && matches[live.id];
+  if (!m || m.phase !== "playing") return;
+  const p = allP(m).find(x => x.blasterId === b.id);
+  if (p) { p.shots = (p.shots || 0) + 1; touchMatch(m); }
+}
+function btBack(b){
+  const m = live.id && matches[live.id];
+  if (!m) return;
+  const p = allP(m).find(x => x.blasterId === b.id);
+  if (p && waiting(p)) { p.waitUntil = null; p.health = maxH(m, p); addLog(m, "respawn", `${pName(p)} réapparaît (blaster)`); touchMatch(m); }
+}
+/* ---------- Noms et améliorations des blasters ----------
+   Chaque blaster garde un « nom interne » (2 octets donnés par l'app officielle, différents d'un blaster
+   à l'autre). Laser Arena s'en sert pour le reconnaître à chaque connexion et retrouver son nom et ses améliorations. */
+/* Réglages des blasters : niveaux de −3 à +3 pour 4 caractéristiques.
+   Utilisés soit pour toute la partie (identiques pour tous), soit par blaster (sa « classe »). */
+const UPG = {
+  hp:   {name:"Santé",        txt:(l, r) => r && r.healthMode === "lives" ? `${l > 0 ? "+" : ""}${l} vie${Math.abs(l) > 1 ? "s" : ""}` : `${l > 0 ? "+" : ""}${l * 10} PV`},
+  dmg:  {name:"Dégâts",       txt:l => `${l > 0 ? "+" : ""}${l * 5} PV par touche (mode points de vie)`},
+  ammo: {name:"Munitions",    txt:l => `${l > 0 ? "+" : ""}${l * 2} au chargeur (à tester)`},
+  resp: {name:"Réapparition", txt:l => l > 0 ? `${l * 2} s plus rapide (à tester)` : `${-l * 2} s plus lente (à tester)`}
+};
+const UPG_MIN = -3, UPG_MAX = 3;
+const ZERO_UPG = () => ({hp:0, dmg:0, ammo:0, resp:0});
+/* Profils prêts à l'emploi : pour toute la partie ou comme « classe » d'un blaster. */
+const PRESETS = {
+  equal:  {name:"Équilibré",  sub:"tout à 0",                                upg:{hp:0, dmg:0, ammo:0, resp:0}},
+  sniper: {name:"Sniper",     sub:"gros dégâts, peu de munitions",            upg:{hp:0, dmg:3, ammo:-3, resp:0}},
+  assault:{name:"Assaut",     sub:"beaucoup de munitions, dégâts réduits",    upg:{hp:0, dmg:-1, ammo:3, resp:0}},
+  tank:   {name:"Survie",     sub:"beaucoup de santé, réapparition rapide",   upg:{hp:3, dmg:-1, ammo:0, resp:2}},
+  rush:   {name:"Chaos",      sub:"fragile, mais revient très vite",          upg:{hp:-2, dmg:0, ammo:2, resp:3}}
+};
+function btIdentify(b, n1, n2){
+  b.key = "n" + n1 + "-" + n2;
+  if (!core.blasters) core.blasters = {};
+  if (!core.blasters[b.key]) { core.blasters[b.key] = {name:"", games:0, upg:ZERO_UPG(), firstSeen:Date.now()}; touchCore(); }
+}
+const bProf = b => b && b.key && core.blasters ? core.blasters[b.key] : null;
+const bName = b => (bProf(b) && bProf(b).name) || (b ? "Blaster " + b.label : "Blaster");
+const profName = (k, pr) => pr.name || "Blaster sans nom (" + k.slice(1) + ")";
+const upgSpent = pr => Object.values(pr.upg || {}).reduce((a, v) => a + Math.abs(v), 0);
+function upgSummary(u, r){
+  const parts = Object.keys(UPG).filter(k => u && u[k]).map(k => `${UPG[k].name} ${u[k] > 0 ? "+" : ""}${u[k]}`);
+  return parts.length ? parts.join(" · ") : "réglages d'origine";
+}
+const presetOf = u => Object.keys(PRESETS).find(k => Object.keys(UPG).every(x => (u[x] || 0) === PRESETS[k].upg[x]));
+const UPG_MODES = {none:"Aucune (armes égales)", all:"Identiques pour tous les blasters", each:"Propres à chaque blaster"};
+/* Bloc « Réglages des blasters » dans les règles (création de partie et Réglages › Modes de jeu). */
+function upgRulesBlock(root, r){
+  const mode = r.upgMode || "none", u = r.upgAll || ZERO_UPG(), pre = presetOf(u);
+  let h = `<div class="label">Réglages des blasters</div><div class="card stack">
+    <div class="seg" style="grid-auto-flow:row;grid-auto-columns:auto">${Object.entries(UPG_MODES).map(([k, n]) => `<button data-act="upgMode" data-root="${root}" data-v="${k}" aria-pressed="${mode === k}">${n}</button>`).join("")}</div>`;
+  if (mode === "none") h += `<p class="note" style="margin:0">Tous les blasters jouent avec les mêmes règles de base : aucune inégalité.</p>`;
+  if (mode === "each") h += `<p class="note" style="margin:0">Chaque blaster utilise ses propres réglages (sa « classe »), visibles et modifiables avant le départ dans l'écran de la partie, ou dans Réglages › Matériel.</p>`;
+  if (mode === "all") {
+    h += `<div class="row" style="flex-wrap:wrap;gap:6px">${Object.entries(PRESETS).map(([k, pz]) => `<button class="zonebtn" style="--c:var(--accent)" data-act="upgPreset" data-root="${root}" data-v="${k}" aria-pressed="${pre === k}" title="${esc(pz.sub)}">${pz.name}</button>`).join("")}</div>
+      ${Object.entries(UPG).map(([k, x]) => stepper(x.name + (u[k] ? " · " + x.txt(u[k], r) : ""), root, "upgAll." + k, u[k] || 0, (u[k] > 0 ? "+" : "") + (u[k] || 0), UPG_MIN, UPG_MAX)).join("")}
+      <p class="note" style="margin:0">Les mêmes réglages pour tous les joueurs de la partie, avec ou sans blaster. Mémorisés pour ce mode de jeu.</p>`;
+  }
+  return h + `</div>`;
+}
+/* Niveaux appliqués à un joueur selon le mode de la partie. */
+function upgFor(m, p){
+  const mode = m.rules.upgMode || "none";
+  if (mode === "all") return m.rules.upgAll || ZERO_UPG();
+  if (mode === "each") { const b = btOf(p), pr = bProf(b); return pr ? pr.upg : null; }
+  return null;
+}
+function blasterSheet(key){
+  const pr = core.blasters[key]; if (!pr) return;
+  pr.upg = {...ZERO_UPG(), ...(pr.upg || {})};
+  const live1 = [...bt.list.values()].find(b => b.key === key && b.write), pre = presetOf(pr.upg);
+  const keep = form && form.blKey === key ? form.name : pr.name;
+  openSheet(`<h3>${esc(profName(key, pr))}</h3>
+    <div class="stack" style="margin-top:10px">
+      <label class="field"><span>Nom du blaster (ex. « Faucon », « Blaster de Max »)</span><input class="input" id="bl-name" data-bind="form.name" value="${esc(keep)}" maxlength="24"></label>
+      ${live1 ? `<button class="btn ghost" data-act="btBlink" data-id="${esc(live1.id)}">Faire clignoter ce blaster</button>` : `<p class="note" style="margin:0">Pas connecté en ce moment.</p>`}
+      <div class="label">Classe du blaster<small>${pre ? PRESETS[pre].name : "personnalisée"}</small></div>
+      <div class="row" style="flex-wrap:wrap;gap:6px">${Object.entries(PRESETS).map(([k, pz]) => `<button class="zonebtn" style="--c:var(--accent)" data-act="blPreset" data-k="${esc(key)}" data-v="${k}" aria-pressed="${pre === k}" title="${esc(pz.sub)}">${pz.name}</button>`).join("")}</div>
+      <div class="card stack">${Object.entries(UPG).map(([k, u]) => `<div class="stepper"><span>${u.name}<br><small class="dim">${pr.upg[k] ? u.txt(pr.upg[k]) : "d'origine"}</small></span><div class="ctl">
+        <button data-act="upg" data-k="${esc(key)}" data-u="${k}" data-d="-1" aria-label="Moins" ${pr.upg[k] <= UPG_MIN ? "disabled" : ""}>−</button><output>${pr.upg[k] > 0 ? "+" : ""}${pr.upg[k]}</output>
+        <button data-act="upg" data-k="${esc(key)}" data-u="${k}" data-d="1" aria-label="Plus" ${pr.upg[k] >= UPG_MAX ? "disabled" : ""}>+</button></div></div>`).join("")}
+      <p class="note" style="margin:0">Ces réglages ne s'appliquent que dans les parties réglées sur « Propres à chaque blaster ». ${pr.games ? `Ce blaster a joué ${plural(pr.games, "partie")}.` : ""}</p></div>
+      <button class="btn primary block" data-act="saveBlaster" data-k="${esc(key)}">Enregistrer</button>
+      <button class="btn ghost block" data-act="closeSheet">Fermer</button>
+      <button class="btn danger block" data-act="forgetBlaster" data-k="${esc(key)}">Oublier ce blaster</button></div>`);
+  form = {name: keep, blKey: key};
+}
+
+/* Santé à régler sur le blaster pour qu'il tombe à 0 au même moment que dans l'app. */
+function btHpFor(m, p, b){
+  const r = m.rules, hits = r.healthMode === "lives" ? maxH(m, p) : Math.ceil(maxH(m, p) / dmgOf(r));
+  return clamp(hits * (b.dmg || 2), 1, 255);
+}
+/* Départ : n° de joueur + équipe + santé, puis départ de la partie sur chaque blaster associé. */
+/* Santé et dégâts des réglages : appliqués au départ, avec ou sans blaster. */
+function applyUpgrades(m){
+  const lives = m.rules.healthMode === "lives";
+  allP(m).forEach(p => {
+    const u = upgFor(m, p); if (!u) return;
+    if (u.hp) { p.maxH = Math.max(1, maxH(m, p) + u.hp * (lives ? 1 : 10)); p.health = p.maxH; }
+    p.dmgBonus = (u.dmg || 0) * 5;
+  });
+  const mode = m.rules.upgMode || "none";
+  if (mode !== "none") addLog(m, "start", mode === "all" ? `Réglages pour tous : ${upgSummary(m.rules.upgAll, m.rules)}` : "Réglages propres à chaque blaster appliqués");
+}
+function btStart(m){
+  applyUpgrades(m);
+  const linked = allP(m).filter(p => btOf(p) && btOf(p).write);
+  if (!linked.length) return;
+  const ffa = MODES[m.mode].ffa;
+  allP(m).forEach((p, i) => { p.pid = i + 1; });
+  linked.forEach(p => {
+    const b = btOf(p), t = teamOf(m, p), pr = bProf(b);
+    const team = ffa ? 2 : Math.min(t.order, 1);
+    p.blasterKey = b.key || null; p.blasterName = bName(b);
+    const u = upgFor(m, p) || ZERO_UPG();
+    btSend(b, [0x49, p.pid, team]); btSend(b, [0x39, btHpFor(m, p, b)]);
+    if (u.ammo) btSend(b, [0x3b, clamp((b.ammoMax || 10) + u.ammo * 2, 1, 99)]);
+    if (u.resp) btSend(b, [0x3c, clamp((b.cooldown || 10) - u.resp * 2, 2, 60)]);
+    btSend(b, [0x41, 0, 0]);
+  });
+  addLog(m, "start", `${linked.length} blaster(s) synchronisé(s)`);
+}
+function btEnd(m){
+  let gained = 0;
+  allP(m).forEach(p => {
+    const b = btOf(p); if (b && b.write) btSend(b, [0x42]);
+    const pr = p.blasterKey && core.blasters && core.blasters[p.blasterKey];
+    if (pr) { pr.games = (pr.games || 0) + 1; gained++; }
+  });
+  if (gained) touchCore();
+}
+function btBadge(m, p){
+  if (!p.blasterId) return "";
+  const b = bt.list.get(p.blasterId);
+  if (!b || !b.write) return ` <span class="pill pause">blaster déconnecté</span>`;
+  return ` <span class="dim" style="font-size:12px">📡 ${esc(bName(b))}${b.bat ? " · " + (b.bat / 100).toFixed(1) + " V" : ""}${p.shots ? " · " + p.shots + " tirs" : ""}</span>`;
+}
+function btSetupCard(m){
+  const ps = allP(m), conn = btConnected();
+  const tooMany = !MODES[m.mode].ffa && m.teams.length > 2;
+  if (!bt.supported) return `<div class="card"><b>Blasters Bluetooth</b><p class="muted" style="margin:6px 0 0">Ce navigateur ne gère pas le Bluetooth. Pour relier les blasters : Chrome sur Android ou sur Mac, ou l'app Bluefy sur iPhone. La saisie manuelle fonctionne partout.</p></div>`;
+  let h = `<div class="card stack"><div class="label">Blasters Bluetooth<small>${conn.length} connecté(s)</small></div>
+    <p class="note" style="margin:0">Optionnel. Un blaster associé compte tout seul les touches (avec le tireur) et ses tirs. Sans blaster, la saisie manuelle reste disponible.</p>
+    ${tooMany ? `<p class="note" style="margin:0;color:var(--warn)">Les blasters ne gèrent que 2 équipes (rouge et bleu) : les équipes 3 et 4 seront réglées en bleu.</p>` : ""}
+    <div class="row" style="flex-wrap:wrap"><button class="btn primary" data-act="btAdd">＋ Connecter un blaster</button>${conn.length ? `<button class="btn ghost" data-act="btAuto">Associer dans l'ordre</button>` : ""}</div>
+    <label class="field"><span>Réglages des blasters pour cette partie</span><select class="input" data-act-change="liveUpgMode">${Object.entries(UPG_MODES).map(([k, n]) => `<option value="${k}" ${(m.rules.upgMode || "none") === k ? "selected" : ""}>${n}</option>`).join("")}</select></label>
+    ${(m.rules.upgMode || "none") === "all" ? `<p class="note" style="margin:0">Pour tous : ${esc(upgSummary(m.rules.upgAll, m.rules))}. À modifier dans Réglages › Modes de jeu, ou à la création de la partie.</p>` : ""}`;
+  if (conn.length) h += `<div class="list">${ps.map(p => `<div class="row"><span class="grow"><b>${esc(pName(p))}</b> ${dot((teamOf(m, p)||{}).color)}</span>
+      <select class="input" style="width:auto;padding:6px 8px" data-act-change="btLink" data-p="${p.id}" aria-label="Blaster de ${esc(pName(p))}">
+      <option value="">Saisie manuelle</option>${conn.map(b => `<option value="${esc(b.id)}" ${p.blasterId === b.id ? "selected" : ""}>${esc(bName(b))}${bProf(b) && upgSpent(bProf(b)) ? " · " + (PRESETS[presetOf(bProf(b).upg)] || {name:"perso"}).name : ""}${b.bat ? " (" + (b.bat / 100).toFixed(1) + " V)" : ""}</option>`).join("")}</select>${(m.rules.upgMode || "none") === "each" && btOf(p) && btOf(p).key ? `<button class="btn ghost" style="padding:7px 10px" data-act="editBlaster" data-k="${esc(btOf(p).key)}" title="${esc(upgSummary(bProf(btOf(p)).upg, m.rules))}">Régler</button>` : ""}</div>`).join("")}</div>`;
+  return h + `</div>`;
+}
+
+/* ---------- Démarrage ---------- */
+loadLocal();
+recover();
+render();
+initDb();
+</script>
+</body></html>
