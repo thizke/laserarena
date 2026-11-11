@@ -451,7 +451,7 @@ function createMatch({name, date, mode, rules, teams, bonus = {}}){
 /* État de l'écran Live (non enregistré) */
 const live = {id:null, proposal:null, overtime:false, dismissed:null, countdown:null, cdTimer:null, wake:null};
 
-const snapP = p => ({id:p.id, points:p.points, hits:p.hits, hitsTaken:p.hitsTaken, elims:p.elims, kos:p.kos, health:p.health, respawns:p.respawns, out:p.out, outAt:p.outAt, waitUntil:p.waitUntil ?? null, puUsed:!!p.puUsed});
+const snapP = p => ({id:p.id, points:p.points, hits:p.hits, hitsTaken:p.hitsTaken, elims:p.elims, kos:p.kos, health:p.health, respawns:p.respawns, out:p.out, outAt:p.outAt, waitUntil:p.waitUntil ?? null, puUsed:!!p.puUsed, hb:p.hb ? clone(p.hb) : undefined});
 const snapT = t => ({id:t.id, objective:t.objective, captures:t.captures});
 function addLog(m, kind, text){ m.events.push({id:uid(), t:Date.now(), el:elapsed(m), kind, text}); }
 
@@ -489,6 +489,8 @@ function knockOut(m, v, s, r){
   }
   else { v.out = true; v.outAt = elapsed(m); }
 }
+/* Compteur par paire : combien de fois le tireur s touche la victime v (h) et la met à 0 (d). */
+const pairOf = (v, s) => { v.hb = v.hb || {}; return v.hb[s.id] = v.hb[s.id] || {h:0, d:0}; };
 function registerHit(m, v, s, opts = {}){
   if (v.out || waiting(v)) return;
   const r = m.rules, extra = (s && r.healthMode === "hp" && s.dmgBonus) || 0;
@@ -498,9 +500,9 @@ function registerHit(m, v, s, opts = {}){
   if (drop) text += canRespawn(v, r) ? " · réapparition" : " · ÉLIMINÉ";
   record(m, "hit", text, {ps: s ? [v, s] : [v]}, () => {
     v.hitsTaken++; v.health = Math.max(0, v.health - dmg);
-    if (s) { s.hits++; s.points += r.pph; }
+    if (s) { s.hits++; s.points += r.pph; pairOf(v, s).h++; }
     if (opts.pu && s) s.puUsed = true;
-    if (v.health === 0) knockOut(m, v, s, r);
+    if (v.health === 0) { knockOut(m, v, s, r); if (s) pairOf(v, s).d++; }
   });
 }
 function successHit(m, s){
@@ -588,14 +590,17 @@ function finishMatch(m, reason){
   if (m.phase === "playing") { m.acc = elapsed(m); m.resumedAt = null; }
   awardTicks(m, m.acc, false);
   if (!m.startedAt) m.startedAt = Date.now();
-  const w = winnerOf(m);
-  m.winnerTeamId = w ? w.id : null;
-  m.winnerSummary = w ? (MODES[m.mode].ffa ? `${w.name} remporte la partie` : `Victoire de l'équipe ${w.name}`) : "Égalité";
+  setWinner(m);
   m.endReason = reason; m.endedAt = Date.now(); m.phase = "finished";
   live.proposal = null;
   addLog(m, "end", "Fin de la partie : " + reason);
   haptic(true);
   touchMatch(m); render();
+}
+function setWinner(m){
+  const w = winnerOf(m);
+  m.winnerTeamId = w ? w.id : null;
+  m.winnerSummary = w ? (MODES[m.mode].ffa ? `${w.name} remporte la partie` : `Victoire de l'équipe ${w.name}`) : "Égalité";
 }
 function victory(m){
   const ts = m.teams; if (ts.length < 2) return null;
@@ -1037,6 +1042,7 @@ function resultHtml(m, inLive){
     ${aw("Chasseur", "var(--danger)", topElim(m), p => p.elims + " élim.")}${aw("Survivant", "var(--t-blue)", survivor(m), p => p.out ? "tombé en dernier" : p.health + (m.rules.healthMode === "lives" ? " vie(s)" : " PV") + " restants")}</div>`;
   h += `<div class="label">Classement individuel</div><div class="card tablewrap" style="padding:8px 12px"><table><thead><tr><th>#</th><th>Joueur</th><th>Pts</th><th>Tch</th><th>Élim</th><th>Mort</th></tr></thead><tbody>
     ${rankedPlayers(m).map((p, i) => `<tr><td style="color:${i ? "var(--muted)" : "var(--gold)"}">${i+1}</td><td>${dot((teamOf(m, p)||{}).color)} ${esc(pName(p))}</td><td><b>${p.points}</b></td><td>${p.hits}</td><td>${p.elims}</td><td>${p.kos}</td></tr>`).join("")}</tbody></table></div>`;
+  h += blasterResultsHtml(m);
   h += `<details class="card"><summary style="font-weight:600;cursor:pointer">Déroulement de la partie (${m.events.length} événements)</summary><div class="log" style="margin-top:10px">${m.events.map(e => `<div><time>${clock(e.el)}</time><span>${esc(e.text)}</span></div>`).join("")}</div></details>`;
   h += `<div class="row" style="flex-wrap:wrap"><button class="btn ghost" data-act="copyResult" data-id="${m.id}">Copier le résumé</button>${inLive ? `<button class="btn primary grow" data-act="closeLive">Fermer</button>` : `<button class="btn danger" data-act="askDeleteMatch" data-id="${m.id}">Supprimer</button>`}</div>`;
   h += `<p class="note" style="margin:0">Résultats enregistrés automatiquement.</p>`;
@@ -1044,6 +1050,29 @@ function resultHtml(m, inLive){
 }
 VIEWS.result = { title: () => "Résultats", html: c => matches[c.id] ? resultHtml(matches[c.id], false) : `<div class="card empty"><p>Partie introuvable.</p></div>` };
 
+/* Résultats : données des blasters (tirs, précision, synchronisation) et « qui a touché qui ». */
+function blasterResultsHtml(m){
+  const ps = allP(m), withB = ps.filter(p => p.blasterId || p.blasterName);
+  const anyPairs = ps.some(p => p.hb && Object.values(p.hb).some(x => x.h));
+  if (!withB.length && !anyPairs) return "";
+  let h = "";
+  if (withB.length) {
+    const pend = (m.btPending || []).map(id => findP(m, id)).filter(Boolean);
+    h += `<div class="label">Blasters</div>${pend.length ? `<div class="card" style="border-color:var(--warn)"><b style="color:var(--warn)">⏳ En attente : ${esc(pend.map(pName).join(", "))}</b><p class="muted" style="margin:6px 0 0">Rapprochez ces blasters du téléphone en gardant cette page ouverte : leurs touches seront ajoutées et le résultat recalculé.</p></div>` : ""}
+      <div class="card tablewrap" style="padding:8px 12px"><table><thead><tr><th></th><th>Joueur</th><th>Tirs</th><th>Touches</th><th>Précision</th><th>Synchro</th></tr></thead><tbody>
+      ${withB.map(p => { const shots = p.shots || 0, acc = shots ? Math.round(p.hits / shots * 100) + " %" : "–";
+        const st = (m.btPending || []).includes(p.id) ? `<span style="color:var(--warn)">⏳</span>` : p.syncAt ? `<span style="color:var(--ok)">✓</span>` : "–";
+        return `<tr><td>${dot((teamOf(m, p)||{}).color)}</td><td>${esc(pName(p))}<div class="dim" style="font-size:11px">${esc(p.blasterName || "")}</div></td><td>${shots}</td><td>${p.hits}</td><td>${acc}</td><td>${st}</td></tr>`; }).join("")}</tbody></table></div>
+      ${m.syncAdded ? `<p class="note" style="margin:0">${m.syncAdded} touche(s) retrouvée(s) dans la mémoire des blasters (hors de portée pendant la partie).</p>` : ""}`;
+  }
+  if (anyPairs) {
+    const shooters = ps.filter(s => ps.some(v => v.hb && v.hb[s.id] && v.hb[s.id].h)), victims = ps.filter(v => v.hb && Object.values(v.hb).some(x => x.h));
+    h += `<div class="label">Qui a touché qui<small>ligne = tireur, colonne = touché</small></div><div class="card tablewrap" style="padding:8px 12px"><table><thead><tr><th></th><th></th>${victims.map(v => `<th title="${esc(pName(v))}">${esc(initials(pName(v)))}</th>`).join("")}</tr></thead><tbody>
+      ${shooters.map(s => `<tr><td>${dot((teamOf(m, s)||{}).color)}</td><td>${esc(pName(s))}</td>${victims.map(v => { const x = v.hb && v.hb[s.id]; return `<td>${x && x.h ? x.h + (x.d ? `<span style="color:var(--danger)"> ✖${x.d}</span>` : "") : (v === s ? "·" : "")}</td>`; }).join("")}</tr>`).join("")}</tbody></table></div>
+      <p class="note" style="margin:0">Nombre de touches ; ✖ = mises à 0.</p>`;
+  }
+  return h;
+}
 function lineChart(pts){
   const W = 320, H = 150, L = 30, R = 10, T = 12, B = 22;
   const max = Math.max(5, ...pts.map(p => p.points));
@@ -1411,8 +1440,10 @@ const ACT = {
   btBlink: d => { const b = bt.list.get(d.id); if (b) btSend(b, [0x50, 1, 3]); },
   btAuto: () => { const m = getMatch(), conn = btConnected(); allP(m).forEach((p, i) => { p.blasterId = conn[i] ? conn[i].id : null; }); touchMatch(m); render(); },
   askEnd: () => openSheet(`<h3>Terminer la partie ?</h3><p class="muted">Le gagnant est calculé selon les règles du mode. Les résultats sont enregistrés.</p><div class="stack" style="gap:8px;margin-top:12px"><button class="btn danger block" data-act="endOk">Terminer et voir les résultats</button><button class="btn ghost block" data-act="closeSheet">Continuer la partie</button></div>`),
-  endOk: () => { closeSheet(); finishMatch(getMatch(), "Terminée par l'organisateur"); window.scrollTo(0, 0); },
-  propEnd: () => { const m = getMatch(), r = live.proposal ? live.proposal.reason : "Fin de partie"; closeSheet(); finishMatch(m, r); window.scrollTo(0, 0); },
+  endOk: () => { closeSheet(); endWithSync(getMatch(), "Terminée par l'organisateur"); window.scrollTo(0, 0); },
+  syncFinishNow: () => finishWithSync(),
+  syncCancel: () => { bt.ending = null; closeSheet(); render(); },
+  propEnd: () => { const m = getMatch(), r = live.proposal ? live.proposal.reason : "Fin de partie"; closeSheet(); endWithSync(m, r); window.scrollTo(0, 0); },
   propContinue: () => { const p = live.proposal; if (p) { if (p.timeUp) live.overtime = true; else live.dismissed = p.reason; } live.proposal = null; closeSheet(); render(); },
   copyResult: async d => {
     const m = matches[d.id];
@@ -1561,6 +1592,9 @@ const bt = {list:new Map(), supported: !!(navigator.bluetooth && navigator.bluet
 const btHex = a => [...a].map(x => x.toString(16).padStart(2, "0")).join(" ");
 const btConnected = () => [...bt.list.values()].filter(b => b.write);
 const btOf = p => p && p.blasterId ? bt.list.get(p.blasterId) : null;
+/* Partie suivie par les blasters : reste active même si l'écran Live est réduit. */
+const btMatch = () => (bt.matchId && matches[bt.matchId]) || (live.id && matches[live.id]) || null;
+const btPlayer = (m, b) => m ? allP(m).find(p => p.blasterId === b.id) : null;
 
 async function btAdd(){
   if (!bt.supported) { toast("Bluetooth indisponible : Chrome sur Android ou Mac, ou Bluefy sur iPhone."); return; }
@@ -1579,7 +1613,7 @@ async function btAdd(){
   }
   await btConnect(b);
 }
-async function btConnect(b){
+async function btConnect(b, quiet){
   try {
     const server = await b.device.gatt.connect();
     const svc = await server.getPrimaryService(BT_SERVICE);
@@ -1587,21 +1621,35 @@ async function btConnect(b){
     b.write = await svc.getCharacteristic(BT_WRITE);
     if (!b.notify) { n.addEventListener("characteristicvaluechanged", e => btDecode(b, new Uint8Array(e.target.value.buffer))); b.notify = n; }
     await n.startNotifications();
-    b.retries = 0;
-    setTimeout(() => toast(`${bName(b)} connecté`), 400); // le nom arrive avec la réponse 0x35
+    const back = !!b.lostAt; b.lostAt = null;
+    setTimeout(() => toast(back ? `${bName(b)} de retour : récupération de ses données…` : `${bName(b)} connecté`), 400); // le nom arrive avec 0x35
     [0x35, 0x33, 0x38, 0x51].forEach(c => btSend(b, [c]));
+    btAfterReconnect(b);
     btRefresh();
-  } catch (e) { b.write = null; toast(`Blaster ${b.label} : connexion impossible (${e.message})`); btRefresh(); }
+  } catch (e) { b.write = null; if (!quiet) toast(`Blaster ${b.label} : connexion impossible (${e.message})`); btRefresh(); }
 }
-/* Perte de connexion : 3 tentatives automatiques si une partie est ouverte. */
+/* Perte de connexion (souvent : joueur hors de portée). Le blaster continue de compter tout seul ;
+   l'app retente la connexion toutes les 7 s et récupère ses compteurs dès son retour. */
 function btLost(b){
-  b.write = null; btRefresh();
-  const m = live.id && matches[live.id];
-  if (m && isActive(m) && allP(m).some(p => p.blasterId === b.id) && b.retries < 3) {
-    b.retries++; toast(`Blaster ${b.label} déconnecté, reconnexion…`);
-    setTimeout(() => btConnect(b), 1500);
-  }
+  b.write = null; b.lostAt = Date.now(); btRefresh();
+  const m = btMatch(), p = btPlayer(m, b);
+  if (p && m.phase !== "setup") toast(`${pName(p)} hors de portée : ses touches seront récupérées à son retour`);
 }
+function btNeedsLink(m, p){
+  if (!m || !p || m.phase === "setup") return false;
+  if (isActive(m)) return true;
+  return m.phase === "finished" && (m.btPending || []).includes(p.id) && Date.now() - (m.endedAt || 0) < 3600000;
+}
+setInterval(() => {
+  const m = btMatch(); if (!m) return;
+  allP(m).forEach(p => {
+    const b = btOf(p);
+    if (!b || b.write || b.connecting || !btNeedsLink(m, p)) return;
+    b.connecting = true;
+    btConnect(b, true).finally(() => { b.connecting = false; });
+  });
+  if (bt.ending) renderSyncSheet();
+}, 7000);
 /* Envoi en file : une commande à la fois, espacées de 0,12 s (comme l'app officielle). */
 function btSend(b, bytes){
   b.chain = b.chain.then(async () => {
@@ -1621,6 +1669,9 @@ function btDecode(b, d){
     case 0x35: b.dmg = d[3] || 2; b.ammoMax = d[2]; b.cooldown = d[12]; btIdentify(b, d[9], d[10]); break;
     case 0x38: b.hp = d[1]; break;
     case 0x3f: btBack(b); break;                      // retour en jeu après le délai du blaster
+    case 0x40: btStatus(b, d[1], d[2], d[3]); break;  // état : morts, munitions, santé
+    case 0x47: btShotsTotal(b, (d[1] << 8) | d[2]); break;              // total des tirs
+    case 0x54: btPairReport(b, d[4], (d[1] << 8) | d[2], d[3]); break;  // compteur face à un adversaire
     case 0x51: b.bat = (d[1] << 8) | d[2]; btBattery(b); break;    // centièmes de volt
     default: return;                                  // 0x49 (détente) et autres : ignorés
   }
@@ -1635,7 +1686,7 @@ function btRefresh(light){
 }
 /* Une touche signalée par le blaster devient une touche dans l'app (avec le tireur). */
 function btHit(b, d){
-  const m = live.id && matches[live.id];
+  const m = btMatch();
   if (!m) return;
   const st = m.stations && m.stations[b.id];
   if (st) { btStationHit(m, b, st, d); return; }
@@ -1647,14 +1698,101 @@ function btHit(b, d){
   if (shooter && (shooter.out || waiting(shooter))) { addLog(m, "hit", `Touche ignorée : ${pName(shooter)} est hors jeu`); touchMatch(m); return; }
   registerHit(m, victim, shooter, {bt:true});
 }
+/* ---------- Récupération et consolidation des compteurs des blasters ----------
+   Chaque blaster mémorise, pour chaque adversaire (par n° de joueur), le nombre de touches reçues
+   et le nombre de fois où il a été mis à 0. Ces totaux sont cumulés depuis le départ : on compare avec
+   ce que l'app a déjà compté et on ajoute seulement la différence (jamais de doublon). */
+function btSync(b){
+  const m = btMatch(), V = btPlayer(m, b);
+  if (!V || m.phase === "setup") return Promise.resolve();
+  btSend(b, [0x47]);
+  allP(m).forEach(q => { if (q !== V && q.pid && q.blasterId) btSend(b, [0x54, q.pid]); });
+  btSend(b, [0x40]); // en dernier : sa réponse marque la fin de la synchronisation
+  return b.chain.then(() => new Promise(r => setTimeout(r, 700)));
+}
+function btAfterReconnect(b){
+  const m = btMatch(), p = btPlayer(m, b);
+  if (!p || m.phase === "setup") return;
+  btSync(b).then(() => {
+    if (m.phase === "finished" && (m.btPending || []).includes(p.id) && p.syncAt >= (m.endedAt || 0)) {
+      m.btPending = m.btPending.filter(id => id !== p.id);
+      btSend(b, [0x42]);
+      setWinner(m); addLog(m, "sync", `Données du blaster de ${pName(p)} récupérées après la fin`); touchMatch(m);
+      toast(`Résultats mis à jour avec les données de ${pName(p)}`); btRefresh();
+    }
+  });
+}
+function btPairReport(b, enemyPid, shots, disabled){
+  const m = btMatch(), V = btPlayer(m, b);
+  if (!V || m.phase === "setup") return;
+  const E = allP(m).find(p => p.pid === enemyPid);
+  if (!E || E === V) return;
+  const pr = pairOf(V, E), r = m.rules, addH = shots - pr.h, addD = disabled - pr.d;
+  if (addH > 0) { pr.h = shots; V.hitsTaken += addH; E.hits += addH; E.points += addH * r.pph; }
+  if (addD > 0) { pr.d = disabled; V.kos += addD; E.elims += addD; E.points += addD * r.ppe; }
+  if (addH > 0 || addD > 0) {
+    m.syncAdded = (m.syncAdded || 0) + Math.max(0, addH);
+    addLog(m, "sync", `Récupéré du blaster de ${pName(V)} : ${[addH > 0 ? "+" + addH + " touche(s)" : "", addD > 0 ? "+" + addD + " mise(s) à 0" : ""].filter(Boolean).join(", ")} par ${pName(E)}`);
+    if (m.phase === "finished") setWinner(m);
+    touchMatch(m);
+  }
+}
+function btShotsTotal(b, n){
+  const m = btMatch(), V = btPlayer(m, b);
+  if (!V || m.phase === "setup") return;
+  V.shotsBlaster = n; V.shots = Math.max(V.shots || 0, n); touchMatch(m);
+}
+function btStatus(b, deaths, ammo, hp){
+  b.ammo = ammo; b.hp = hp;
+  const m = btMatch(), V = btPlayer(m, b);
+  if (!V || m.phase === "setup") return;
+  V.deathsBlaster = deaths; V.syncAt = Date.now();
+  const r = m.rules, unit = r.healthMode === "lives" ? 1 : dmgOf(r);
+  if (hp === 0 && !V.out && !r.respawn && deaths > 0) { V.health = 0; V.out = true; V.outAt = V.outAt || elapsed(m); }
+  else if (hp > 0 && !V.out && !waiting(V)) V.health = clamp(Math.ceil(hp / (b.dmg || 2)) * unit, 0, maxH(m, V));
+  if (m.phase === "finished") setWinner(m);
+  touchMatch(m);
+  if (bt.ending) renderSyncSheet();
+}
+/* Fin de partie : on interroge d'abord chaque blaster, puis on termine. */
+function endWithSync(m, reason){
+  const linked = allP(m).filter(p => btOf(p));
+  if (!linked.length) { finishMatch(m, reason); return; }
+  if (m.phase === "playing") { freeze(m, elapsed(m)); addLog(m, "pause", "Récupération des données des blasters"); touchMatch(m); }
+  bt.matchId = m.id;
+  bt.ending = {mid:m.id, t0:Date.now(), reason};
+  renderSyncSheet();
+  linked.forEach(p => { const b = btOf(p); if (b.write) btSync(b).then(renderSyncSheet); });
+}
+function renderSyncSheet(){
+  const e = bt.ending; if (!e) return;
+  const m = matches[e.mid]; if (!m) { bt.ending = null; return; }
+  const linked = allP(m).filter(p => btOf(p)), done = p => p.syncAt >= e.t0;
+  if (linked.every(done)) { finishWithSync(); return; }
+  openSheet(`<h3>Récupération des données</h3><p class="muted">Chaque blaster a compté ses touches pendant la partie, même loin du téléphone. Rapprochez les blasters en attente.</p>
+    <div class="list" style="margin:10px 0">${linked.map(p => { const b = btOf(p);
+      return `<div class="row"><span class="grow"><b>${esc(pName(p))}</b> <span class="dim" style="font-size:12px">${esc(bName(b))}</span></span>${done(p) ? `<span style="color:var(--ok);font-weight:700">✓ récupéré</span>` : b.write ? `<span style="color:var(--accent)">lecture…</span>` : `<span style="color:var(--warn)">⏳ hors de portée</span>`}</div>`; }).join("")}</div>
+    <div class="stack" style="gap:8px"><button class="btn primary block" data-act="syncFinishNow">Terminer maintenant</button>
+    <p class="note" style="margin:0">Les blasters encore absents seront lus dès qu'ils reviendront à portée de ce téléphone (page ouverte), et le résultat se mettra à jour.</p>
+    <button class="btn ghost block" data-act="syncCancel">Retour à la partie</button></div>`, true);
+}
+function finishWithSync(){
+  const e = bt.ending; if (!e) return;
+  bt.ending = null; closeSheet();
+  const m = matches[e.mid];
+  m.btPending = allP(m).filter(p => btOf(p) && !(p.syncAt >= e.t0)).map(p => p.id);
+  finishMatch(m, e.reason);
+  if (m.syncAdded) toast(`${m.syncAdded} touche(s) récupérée(s) dans les blasters`);
+}
+
 function btShot(b){
-  const m = live.id && matches[live.id];
+  const m = btMatch();
   if (!m || m.phase !== "playing") return;
   const p = allP(m).find(x => x.blasterId === b.id);
   if (p) { p.shots = (p.shots || 0) + 1; touchMatch(m); }
 }
 function btBack(b){
-  const m = live.id && matches[live.id];
+  const m = btMatch();
   if (!m) return;
   const p = allP(m).find(x => x.blasterId === b.id);
   if (p && waiting(p)) { p.waitUntil = null; p.health = maxH(m, p); addLog(m, "respawn", `${pName(p)} réapparaît (blaster)`); touchMatch(m); }
@@ -1838,6 +1976,7 @@ function applyUpgrades(m){
   if (mode !== "none") addLog(m, "start", mode === "all" ? `Réglages pour tous : ${upgSummary(m.rules.upgAll, m.rules)}` : "Réglages propres à chaque blaster appliqués");
 }
 function btStart(m){
+  bt.matchId = m.id;
   applyUpgrades(m);
   const linked = allP(m).filter(p => btOf(p) && btOf(p).write);
   if (!linked.length && !Object.keys(m.stations || {}).length) return;
@@ -1859,7 +1998,7 @@ function btStart(m){
 function btEnd(m){
   let gained = 0;
   allP(m).forEach(p => {
-    const b = btOf(p); if (b && b.write) btSend(b, [0x42]);
+    const b = btOf(p); if (b && b.write && !(m.btPending || []).includes(p.id)) btSend(b, [0x42]);
     const pr = p.blasterKey && core.blasters && core.blasters[p.blasterKey];
     if (pr) { pr.games = (pr.games || 0) + 1; gained++; }
   });

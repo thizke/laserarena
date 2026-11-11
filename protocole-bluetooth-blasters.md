@@ -103,3 +103,15 @@ Le message `0x35` contient aux octets [9] et [10] deux indices (1 à 50) qui for
 - 2e mot : Beast, Blast, Brawler, Cobra, Colonel, Commander, Commando, Defender, Dragon, Eagle, Falcon, Force, General, Guardian, Gunner, Gunslinger, Hero, King, Knight, Leader, Lion, Mantis, Marshal, Master, Monkey, Moon, Ninja, Officer, Operative, Pirate, Queen, Raptor, Samurai, Scorpion, Sheriff, Snake, Sniper, Soldier, Star, Storm, Sun, T-Rex, Tiger, Vampire, Villain, Viper, Warrior, Werewolf, Wolf, Zombie
 
 Le blaster ne stocke que ces deux numéros (plus un compteur `m_NameIncrement` côté app pour les doublons), jamais le texte. Ces listes viennent de l'APK **1.2.8** : d'autres versions ont utilisé d'autres mots. Exemple : le blaster `09 32` donne « Crimson Zombie » avec cette liste, mais s'affichait « Delta Zombie » dans l'app utilisée à l'époque. Laser Arena permet donc de corriger un mot, et la correction s'applique à tous les blasters qui ont le même numéro. Les traductions ne sont pas dans l'APK.
+
+## Compteurs gardés dans le blaster (récupération après une perte de connexion)
+
+Le blaster continue de jouer seul hors de portée et garde ses compteurs depuis le départ de la partie. L'app officielle les lisait en mode « base station » (`MatchControllerMPBaseStation::GatherOrphanStats`) :
+
+| Envoi | Réponse | Contenu |
+|---|---|---|
+| `0x54` + n° d'un adversaire | `0x54` | [1–2] touches reçues de cet adversaire (16 bits, poids fort d'abord), [3] fois mis à 0 par lui, [4] n° de l'adversaire |
+| `0x47` | `0x47` | [1–2] total des tirs (16 bits, poids fort d'abord) |
+| `0x40` | `0x40` | [1] morts, [2] munitions, [3] santé |
+
+Laser Arena interroge chaque blaster à son retour à portée et à la fin de la partie, avant d'envoyer `0x42`. Il n'ajoute que la différence avec ce qu'il a déjà compté, donc rien n'est compté deux fois. Lu dans le code, pas encore confirmé sur le terrain. On ne sait pas encore si `0x42` remet ces compteurs à zéro : l'app lit donc toujours avant d'envoyer `0x42`.
