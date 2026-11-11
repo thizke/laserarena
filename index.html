@@ -272,7 +272,7 @@ const ICON = {
 const MARK = '<svg class="mark" viewBox="0 0 64 64" aria-hidden="true"><path d="M2 42 62 22" stroke="var(--t-red)" stroke-width="3" opacity=".9"/><path d="M2 22 62 42" stroke="var(--t-blue)" stroke-width="3" opacity=".9"/><circle cx="32" cy="32" r="15" fill="none" stroke="var(--accent)" stroke-width="3.5"/><circle cx="32" cy="32" r="4" fill="var(--accent)"/><path d="M32 6v10M32 48v10M6 32h10M48 32h10" stroke="var(--accent)" stroke-width="3.5" stroke-linecap="round"/></svg>';
 
 /* ---------- Données ---------- */
-let core = {players:[], teams:[], equipment:[], blasters:{}, settings:{...DEFAULT_SETTINGS}, modeRules:{}, updatedAt:0};
+let core = {players:[], teams:[], equipment:[], blasters:{}, nameWords:{f:{}, s:{}}, settings:{...DEFAULT_SETTINGS}, modeRules:{}, updatedAt:0};
 let matches = {};                 // id -> partie
 let syncedIds = new Set();        // parties connues du serveur (pour propager les suppressions)
 const tombstones = new Set();     // parties supprimées ici, en attente de confirmation du serveur
@@ -1400,8 +1400,13 @@ const ACT = {
     const nv = (pr.upg[u] || 0) + delta; if (nv < UPG_MIN || nv > UPG_MAX) return;
     pr.upg[u] = nv; touchCore(); blasterSheet(d.k);
   },
-  saveBlaster: d => { const pr = core.blasters[d.k]; if (pr) { pr.name = (form.name || "").trim().slice(0, 24); pr.status = form.status || "ready"; pr.notes = (form.notes || "").slice(0, 300); touchCore(); } closeSheet(); render(); toast("Blaster enregistré"); },
-  forgetBlaster: d => confirmSheet("Oublier ce blaster ?", "Son nom, son expérience et ses améliorations seront effacés. Il redeviendra « sans nom » à la prochaine connexion.", "Oublier", "forgetBlasterOk", {k:d.k}),
+  saveBlaster: d => { const pr = core.blasters[d.k];
+    const [n1, n2] = keyNums(d.k); core.nameWords = core.nameWords || {f:{}, s:{}};
+    const setW = (which, list, n, v) => { v = (v || "").trim().slice(0, 20); if (!n) return; if (!v) delete core.nameWords[which][n]; else core.nameWords[which][n] = v; /* même inchangé, le mot est mémorisé : il devient « confirmé » */ };
+    if (form.w1 != null) { core.nameWords.f = core.nameWords.f || {}; setW("f", NAME_1, n1, form.w1); }
+    if (form.w2 != null) { core.nameWords.s = core.nameWords.s || {}; setW("s", NAME_2, n2, form.w2); }
+    if (pr) { pr.name = (form.name || "").trim().slice(0, 24); pr.status = form.status || "ready"; pr.notes = (form.notes || "").slice(0, 300); touchCore(); } closeSheet(); render(); toast("Blaster enregistré"); },
+  forgetBlaster: d => confirmSheet("Oublier ce blaster ?", "Son surnom, ses notes et sa classe seront effacés. Il redeviendra « sans nom » à la prochaine connexion.", "Oublier", "forgetBlasterOk", {k:d.k}),
   forgetBlasterOk: d => { delete core.blasters[d.k]; touchCore(); closeSheet(); render(); },
   btBlink: d => { const b = bt.list.get(d.id); if (b) btSend(b, [0x50, 1, 3]); },
   btAuto: () => { const m = getMatch(), conn = btConnected(); allP(m).forEach((p, i) => { p.blasterId = conn[i] ? conn[i].id : null; }); touchMatch(m); render(); },
@@ -1678,7 +1683,13 @@ const PRESETS = {
 /* Noms d'origine : listes de l'app officielle (Unity, BlasterNameList). L'indice 0 = pas de nom. */
 const NAME_1 = ["Air","Alpha","Atomic","Beta","Blazing","Blue","Cool","Cosmic","Crimson","Dark","Earth","Elite","Epic","Fallen","Fierce","Fire","Furious","Gamma","Glowing","Green","Heroic","Howling","Laser","Lethal","Light","Lightning","Metal","Mighty","Neon","Omega","Orange","Pale","Pink","Purple","Quick","Radiant","Red","Rock","Shadow","Stealth","Super","Thunder","Twilight","Velvet","Void","Water","Wild","Wind","Wood","Yellow"];
 const NAME_2 = ["Beast","Blast","Brawler","Cobra","Colonel","Commander","Commando","Defender","Dragon","Eagle","Falcon","Force","General","Guardian","Gunner","Gunslinger","Hero","King","Knight","Leader","Lion","Mantis","Marshal","Master","Monkey","Moon","Ninja","Officer","Operative","Pirate","Queen","Raptor","Samurai","Scorpion","Sheriff","Snake","Sniper","Soldier","Star","Storm","Sun","T-Rex","Tiger","Vampire","Villain","Viper","Warrior","Werewolf","Wolf","Zombie"];
-const officialName = (n1, n2) => (n1 && n2 && NAME_1[n1 - 1] && NAME_2[n2 - 1]) ? NAME_1[n1 - 1] + " " + NAME_2[n2 - 1] : "";
+/* Le blaster ne garde que 2 numéros. Les mots viennent de la liste de l'app Nerf 1.2.8 ; d'autres versions
+   ont pu utiliser d'autres mots (ex. « Delta ») : l'organisateur corrige un mot une fois, la correction
+   s'applique à tous les blasters qui partagent ce numéro (core.nameWords). */
+const nameWord = (list, which, n) => (core.nameWords && core.nameWords[which] && core.nameWords[which][n]) || list[n - 1] || "";
+const officialName = (n1, n2) => (n1 && n2) ? (nameWord(NAME_1, "f", n1) + " " + nameWord(NAME_2, "s", n2)).trim() : "";
+const keyNums = k => { const m = /^n(\d+)-(\d+)$/.exec(k || ""); return m ? [Number(m[1]), Number(m[2])] : [0, 0]; };
+const wordConfirmed = (which, n) => !!(core.nameWords && core.nameWords[which] && core.nameWords[which][n]);
 function btIdentify(b, n1, n2){
   b.key = "n" + n1 + "-" + n2;
   if (!core.blasters) core.blasters = {};
@@ -1696,8 +1707,9 @@ function btBattery(b){
   if (changed || !pr.batAt || Math.abs((pr.bat || 0) - b.bat) >= 5 || now - pr.batAt > 600000) { pr.bat = b.bat; pr.batAt = now; touchCore(); }
 }
 const bProf = b => b && b.key && core.blasters ? core.blasters[b.key] : null;
-const bName = b => (bProf(b) && (bProf(b).name || bProf(b).official)) || (b ? "Blaster " + b.label : "Blaster");
-const profName = (k, pr) => pr.name || pr.official || "Blaster sans nom (" + k.slice(1) + ")";
+const offOf = k => officialName(...keyNums(k));
+const bName = b => (bProf(b) && (bProf(b).name || offOf(b.key))) || (b ? "Blaster " + b.label : "Blaster");
+const profName = (k, pr) => pr.name || offOf(k) || "Blaster sans nom (" + k.slice(1) + ")";
 const upgSpent = pr => Object.values(pr.upg || {}).reduce((a, v) => a + Math.abs(v), 0);
 function upgSummary(u, r){
   const parts = Object.keys(UPG).filter(k => u && u[k]).map(k => `${UPG[k].name} ${u[k] > 0 ? "+" : ""}${u[k]}`);
@@ -1730,12 +1742,17 @@ function blasterSheet(key){
   const pr = core.blasters[key]; if (!pr) return;
   pr.upg = {...ZERO_UPG(), ...(pr.upg || {})};
   const live1 = [...bt.list.values()].find(b => b.key === key && b.write), pre = presetOf(pr.upg);
-  const f = form && form.blKey === key ? form : {name:pr.name || "", status:pr.status || "ready", notes:pr.notes || "", blKey:key};
+  const [k1, k2] = keyNums(key);
+  const f = form && form.blKey === key ? form : {name:pr.name || "", status:pr.status || "ready", notes:pr.notes || "", blKey:key, w1:k1 ? nameWord(NAME_1, "f", k1) : "", w2:k2 ? nameWord(NAME_2, "s", k2) : ""};
   const low = pr.bat && pr.bat < BAT_LOW;
   openSheet(`<h3>${esc(profName(key, pr))}</h3>
     <div class="stack" style="margin-top:10px">
-      ${pr.official ? `<p class="muted" style="margin:0">Nom d'origine : <b style="color:var(--text)">${esc(pr.official)}</b> (gardé dans le blaster, même avec une autre app)</p>` : ""}
-      <label class="field"><span>Surnom (optionnel)</span><input class="input" id="bl-name" data-bind="form.name" value="${esc(f.name)}" maxlength="24" placeholder="${esc(pr.official || "ex. Blaster de Max")}"></label>
+      ${(() => { const [n1, n2] = keyNums(key); if (!n1 || !n2) return `<p class="note" style="margin:0">Ce blaster n'a pas de nom d'origine enregistré.</p>`;
+        const ok = wordConfirmed("f", n1) && wordConfirmed("s", n2);
+        return `<div class="field"><span>Nom d'origine (numéros ${n1} et ${n2} lus dans le blaster)${ok ? " · confirmé" : ""}</span>
+          <div class="row"><input class="input" id="bl-w1" data-bind="form.w1" value="${esc(f.w1)}" aria-label="Premier mot (n° ${n1})"><input class="input" id="bl-w2" data-bind="form.w2" value="${esc(f.w2)}" aria-label="Deuxième mot (n° ${n2})"></div>
+          ${ok ? "" : `<small class="dim">Traduit avec la liste de l'app Nerf 1.2.8. Si votre app affichait un autre nom (ex. « Delta Zombie »), corrigez-le ici : la correction vaut pour tous les blasters qui ont le même numéro.</small>`}</div>`; })()}
+      <label class="field"><span>Surnom (optionnel)</span><input class="input" id="bl-name" data-bind="form.name" value="${esc(f.name)}" maxlength="24" placeholder="${esc(offOf(key) || "ex. Blaster de Max")}"></label>
       ${live1 ? `<button class="btn ghost" data-act="btBlink" data-id="${esc(live1.id)}">Faire clignoter ce blaster</button>` : `<p class="note" style="margin:0">Pas connecté en ce moment.</p>`}
       <div class="grid3">${tile("Batterie", pr.bat ? batTxt(pr.bat) : "–")}${tile("Mesurée", pr.batAt ? fmtDate(pr.batAt, true) : "–")}${tile("Parties", pr.games || 0)}</div>
       ${low ? `<p class="note" style="margin:0;color:var(--warn)">Batterie faible : pensez à changer les piles.</p>` : ""}
@@ -1764,7 +1781,7 @@ function blasterEquipHtml(){
   h += `<div class="card flush list">${pending.map(b => `<div class="row"><span class="dot" style="--c:var(--ok)"></span><span class="grow">Blaster ${esc(b.label)} <span class="dim">· identification…</span></span></div>`).join("")}
     ${profs.map(([k, pr]) => {
       const b = [...bt.list.values()].find(x => x.key === k && x.write), st = EQ_STATUS[pr.status || "ready"], low = pr.bat && pr.bat < BAT_LOW;
-      const sub = [pr.name && pr.official ? pr.official : "", pr.bat ? (low ? "⚠ " : "") + batTxt(pr.bat) : "", pr.battChangedAt ? "piles " + fmtDate(pr.battChangedAt) : "", upgSpent(pr.upg || ZERO_UPG()) ? "classe " + ((PRESETS[presetOf(pr.upg)] || {name:"perso"}).name) : ""].filter(Boolean).join(" · ");
+      const sub = [pr.name && offOf(k) ? offOf(k) : "", pr.bat ? (low ? "⚠ " : "") + batTxt(pr.bat) : "", pr.battChangedAt ? "piles " + fmtDate(pr.battChangedAt) : "", upgSpent(pr.upg || ZERO_UPG()) ? "classe " + ((PRESETS[presetOf(pr.upg)] || {name:"perso"}).name) : ""].filter(Boolean).join(" · ");
       return `<div class="row"><button class="tap row grow" style="width:auto" data-act="editBlaster" data-k="${esc(k)}"><span class="dot" style="--c:${b ? "var(--ok)" : "var(--dim)"}" title="${b ? "connecté" : "pas connecté"}"></span>
         <div class="grow" style="min-width:0"><b>${esc(profName(k, pr))}</b> ${pr.status && pr.status !== "ready" ? `<span style="color:${st.c};font-size:12px;font-weight:700">${st.n}</span>` : ""}<div class="dim ellipsis" style="font-size:12px;${low ? "color:var(--warn)" : ""}">${esc(sub || "–")}</div></div></button>
         ${b ? `<button class="btn ghost" style="padding:7px 10px" data-act="btBlink" data-id="${esc(b.id)}">Identifier</button>` : ""}</div>`; }).join("")}</div>`;
